@@ -4,6 +4,8 @@
 #
 # **************************************************************************************************************************
 
+import re
+
 class AssemblerError(Exception):
 	pass
 
@@ -24,6 +26,10 @@ class CodeBucket:
 		print("{0:06x} {1:08x}".format(self.pointer,value))
 		self.pointer += 4
 
+	def patch(self,address,offset):
+		self.code[address/4] = (self.code[address/4] & 0xF8000000) | offset
+		print("FIXUP {0:06x} {1:08x}".format(address,self.code[address/4]))
+
 # **************************************************************************************************************************
 #												Stores a collection of labels
 # **************************************************************************************************************************
@@ -43,10 +49,22 @@ class  LabelBucket:
 
 	def clearBucket(self):
 		self.addresses = [ None ] * 10 													# the 10 addresses for labels 0-9
-		self.references = [ [] ] * 10 													# addresses referred to.
+		self.references = [ None ] * 10 												# addresses referred to.
 
-	def backPatch(self):							
-		pass 
+	def addBackReference(self,labelNumber,reference):
+		if self.references[labelNumber] is None:
+			self.references[labelNumber] = []
+		self.references[labelNumber].append(reference)
+
+	def backPatch(self,codeBucket):							
+		for i in range(0,10):															# do back patches.
+			if self.references[i] is not None:											# references required.
+				if self.addresses[i] is None:											# didn't define it !
+					raise AssemblerError("Label {0} was not defined".format(i))
+				else:
+					for addr in self.references[i]:										# for each patch reference.
+						offset = ((self.addresses[i] - addr - 4) >> 2) & 0x07FFFFFF 	# work out the offset.
+						codeBucket.patch(addr,offset)
 
 # **************************************************************************************************************************
 #															Assembler
@@ -60,7 +78,8 @@ class RISCAssembler:
 		self.lineNumber = 1
 		self.previousDeclaration = 0 													# last declaration for FORTH stack.
 		self.conditions = [ "xx","z","lt","le","xx","nz","ge","gt"]						# condition codes.
-
+		self.mnemonics = ["mov","add","and","xor"]										# command codes.
+		
 	def assemble(self,sourceList):
 		for l in sourceList:															# for each line.
 			l = l if l.find("//") < 0 else l[:l.find("//")]								# remove comments
@@ -68,6 +87,7 @@ class RISCAssembler:
 			if l != "":																	# assemble non blank lines.
 				self.assembleLine(l)
 			self.lineNumber += 1 														# bump line number.
+		self.labels.backPatch(self.code) 												# any outstanding labels
 
 	def assembleLine(self,l):
 		if l[:3] == "ret":																# handle RET 
@@ -82,7 +102,7 @@ class RISCAssembler:
 			self.labels.define(int(l[1:].strip()),self.code.getPointer())
 
 		if l[0] == ":":																	# code block definition
-			self.labels.backPatch()														# backpatch labels
+			self.labels.backPatch(self.code)											# backpatch labels
 			self.labels.clearBucket()													# and clear the labels.
 			defStart = self.code.getPointer()
 			if l[1:] in self.definitions:
@@ -102,8 +122,16 @@ class RISCAssembler:
 				word = word | 0x08000000 												# set bit 27 the link bit.				
 				self.line = self.line[1:]
 			word = word | self.getConditionCode() 										# add in condition code if any
-			print(self.line)
-			self.code.write(word)
+			if self.line in self.definitions: 											# calling a definition ?
+				address = self.definitions[self.line]
+			else:
+				address = self.code.getPointer()+4 										# temporary fudge, puts zero in
+				if re.match("^\\.\\d$",self.line) is None:								# check it is .n
+					raise AssemblerError("Bad operand "+l)
+				self.labels.addBackReference(int(self.line[1]),self.code.getPointer())	# add a back reference.
+
+			offset = ((address - (self.code.getPointer()+4)) >> 2) & 0x07FFFFFF
+			self.code.write(word|offset)
 
 	def writeDefinitionRecord(self,name):
 		n = (len(name)+3) / 4 															# how many words to write out.
@@ -130,14 +158,19 @@ class RISCAssembler:
 
 ra = RISCAssembler() 																	# create risc assembler
 src = """
-	+2 						// Skip 8 words
 	:at
+	+2 						// Skip 8 words
 
 	:freddie
-	.2
-	blz at
-	bge  .2
+	b .2
+	bl .2
+	.2 						// label 2
+	bz at 					// call another word
+	bge  .2 				// call a label
 	bl 	.2
+
 """.split("\n")
 ra.assemble(src)
 print(ra.definitions)
+print(ra.labels.addresses)
+print(ra.labels.references)
