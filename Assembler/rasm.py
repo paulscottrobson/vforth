@@ -1,7 +1,9 @@
 # **************************************************************************************************************************
+# **************************************************************************************************************************
 #
 #													RISC VM Assembler.
 #
+# **************************************************************************************************************************
 # **************************************************************************************************************************
 
 import re
@@ -18,17 +20,22 @@ class CodeBucket:
 		self.code = [ None ] * 16 														# code starts at offset 64
 		self.pointer = 64 																# this is the code pointer.
 
+		# starts MOV R0,@R15 [start address] MOV R15,R0 								# 64..67
+		# address of start of dictionary chain (self.previousDeclaration) 				# 68..71
+		# address of first word free after the end  									# 72..75
+		
 	def getPointer(self):
 		return self.pointer
 
 	def write(self,value):
 		self.code.append(value)
-		print("{0:06x} {1:08x}".format(self.pointer,value))
+		#print("{0:06x} {1:08x}".format(self.pointer,value))
 		self.pointer += 4
 
 	def patch(self,address,offset):
 		self.code[address/4] = (self.code[address/4] & 0xF8000000) | offset
-		print("FIXUP {0:06x} {1:08x}".format(address,self.code[address/4]))
+		#print("FIXUP {0:06x} {1:08x}".format(address,self.code[address/4]))
+
 
 # **************************************************************************************************************************
 #												Stores a collection of labels
@@ -65,6 +72,7 @@ class  LabelBucket:
 					for addr in self.references[i]:										# for each patch reference.
 						offset = ((self.addresses[i] - addr - 4) >> 2) & 0x07FFFFFF 	# work out the offset.
 						codeBucket.patch(addr,offset)
+		self.clearBucket()																# clear out
 
 # **************************************************************************************************************************
 #															Assembler
@@ -75,11 +83,17 @@ class RISCAssembler:
 		self.code = CodeBucket() 														# code goes here
 		self.labels = LabelBucket() 													# labels go here
 		self.definitions = {} 															# known definitions
+		self.fileName = ""
 		self.lineNumber = 1
 		self.previousDeclaration = 0 													# last declaration for FORTH stack.
 		self.conditions = [ "xx","z","lt","le","xx","nz","ge","gt"]						# condition codes.
 		self.mnemonics = ["mov","add","and","xor"]										# command codes.
-		
+
+	def assembleFile(self,fileName):
+		self.fileName = fileName
+		self.lineNumber = 1
+		self.assemble(open(fileName).readlines())
+
 	def assemble(self,sourceList):
 		for l in sourceList:															# for each line.
 			l = l if l.find("//") < 0 else l[:l.find("//")]								# remove comments
@@ -98,10 +112,10 @@ class RISCAssembler:
 			for i in range(0,int(l[1:].strip())):										# pad out with that many words
 				self.code.write(0)
 
-		if l[0] == ".":																	# label definition.
+		elif l[0] == ".":																# label definition.
 			self.labels.define(int(l[1:].strip()),self.code.getPointer())
 
-		if l[0] == ":":																	# code block definition
+		elif l[0] == ":":																# code block definition
 			self.labels.backPatch(self.code)											# backpatch labels
 			self.labels.clearBucket()													# and clear the labels.
 			defStart = self.code.getPointer()
@@ -115,7 +129,7 @@ class RISCAssembler:
 			self.previousDeclaration = defStart 										# update address previous declaration.
 			self.definitions[l[1:]] = self.code.getPointer() 							# save code address for this word.
 
-		if l[0] == 'b':																	# B or BL
+		elif l[0] == 'b':																# B or BL
 			word = 0x80000000 															# branch is bit 31.
 			self.line = self.line[1:] 													# skip B
 			if self.line != "" and self.line[0] == 'l':									# is it BL ?
@@ -132,6 +146,44 @@ class RISCAssembler:
 
 			offset = ((address - (self.code.getPointer()+4)) >> 2) & 0x07FFFFFF
 			self.code.write(word|offset)
+
+		else:																			# must be a command.
+			word = None
+			word2 = None
+
+			for i in range(0,4):														# find the command.
+				if self.line[:3] == self.mnemonics[i]:									# if found.
+					word = i << 24 														# use that word.
+			if word is None: 															# not found.
+				raise AssemblerError("Unknown mnemonic "+l)	
+			self.line = self.line[3:]													# remove mnemonic
+			word = word | self.getConditionCode() 										# process the condition code.
+			word = word | (self.getAddress() << 8)										# get the target address.
+			if self.line == "" or self.line[0] != ",":									# missing ,
+				raise AssemblerError("Missing seperator comma")
+			self.line = self.line[1:].strip()											# throw comma.
+			if self.line == "":															# check there is something.
+				raise AssemblerError("Missing source")
+			m = re.match("^(\\-?[0-9]+)",self.line)										# is it followed by a constant ?
+			if m is None:																# no, just grab the source address
+				word = word | self.getAddress()								
+			else:
+				const = int(m.group(1))													# this is the constant value
+				self.line = self.line[len(m.group(1)):].strip()							# remove it.
+				if const >= -128 and const <= 127:										# can we use a short constant ?
+					word = word | (const & 0xFF) | 0x00800000 							# set bit 23 which is short constant.
+				else:
+					word = word | 0x8F 													# indirect r15
+					word2 = const & 0xFFFFFFFF 											# with a second word.	
+
+			if self.line != "":															# is there a rotate value.
+				m = re.match("^\\s*\\,(\\-?\\d+)$",self.line)							# get the rotate value.
+				if m is None:
+					raise AssemblerError("Bad rotation "+self.line)
+				word = word + ((int(m.group(1)) & 0x1F) << 16)							# put rotate in 16..20
+			self.code.write(word)														# write out opcode
+			if word2 is not None:
+				self.code.write(word2)													# and second opcode if there is one.
 
 	def writeDefinitionRecord(self,name):
 		n = (len(name)+3) / 4 															# how many words to write out.
@@ -156,21 +208,21 @@ class RISCAssembler:
 		self.line = self.line.strip()													# remove leading spaces.
 		return ccode << 28 																# shift into correct position
 
+	def getAddress(self):
+		self.line = self.line.strip()
+		reference = 0
+		if self.line != "" and self.line[0] == '@':										# indirection ?
+			reference = 0x80 															# set bit 7 (indirection)
+			self.line = self.line[1:]													# get the reference.
+		m = re.match("^r(\\d+)",self.line)												# look for r<nnn>
+		if m is None or int(m.group(1)) < 0 or int(m.group(1)) > 15: 					# validate it.
+			raise AssemblerError("Bad register "+self.line)
+		self.line = self.line[len(m.group(1))+1:].strip() 								# remove r<nnnn>
+		return reference + int(m.group(1))
+
 ra = RISCAssembler() 																	# create risc assembler
-src = """
-	:at
-	+2 						// Skip 8 words
+ra.assembleFile("demo.asm")
 
-	:freddie
-	b .2
-	bl .2
-	.2 						// label 2
-	bz at 					// call another word
-	bge  .2 				// call a label
-	bl 	.2
-
-""".split("\n")
-ra.assemble(src)
 print(ra.definitions)
 print(ra.labels.addresses)
 print(ra.labels.references)
