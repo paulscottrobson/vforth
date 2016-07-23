@@ -170,10 +170,11 @@ void GFXString(int xc,int yc,const char *text,int size,int colour,int back) {
 //
 // *******************************************************************************************************************************
 
-void GFXNumber(int xc,int yc,int number,int base,int width,int size,int colour,int back) {
+void GFXNumber(int xc,int yc,long number,int base,int width,int size,int colour,int back) {	
 	if (width > 0) {
-		GFXNumber(xc,yc,number/base,base,width-1,size,colour,back);
-		GFXCharacter(xc + size*6*(width-1),yc,"0123456789ABCDEF"[number % base],size,colour,back);
+		number = number & 0xFFFFFFFF;
+		GFXNumber(xc,yc,number >> 4,base,width-1,size,colour,back);
+		GFXCharacter(xc + size*6*(width-1),yc,"0123456789ABCDEF"[number & (base-1)],size,colour,back);
 	}
 }
 

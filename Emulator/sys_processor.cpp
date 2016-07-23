@@ -27,7 +27,7 @@
 //														CPU / Memory
 // *******************************************************************************************************************************
 
-static LONG32 memory[0x40000]; 														// 256k words of memory. (1M Bytes)
+static LONG32 memory[0x40000]; 														// 256k words of memory. (1M Bytes) 00000-FFFFF
 static LONG32 pctr;
 static LONG32 rsp;
 static LONG32 dsp;
@@ -42,6 +42,10 @@ static LONG32 cycles;
 // *******************************************************************************************************************************
 
 void CPUReset(void) {
+	pctr = 0x00000;
+	rsp = RST_RSP;
+	dsp = RST_DSP;
+	cycles = 0;
 }
 
 // *******************************************************************************************************************************
@@ -85,11 +89,11 @@ LONG32 CPUGetStepOverBreakpoint(void) {
 // *******************************************************************************************************************************
 
 LONG32 CPUReadMemory(LONG32 address) {
-	return memory[(address / 4) & 0x3FFFF];
+	return memory[(address / 4) & 0x3FFFF] & 0xFFFFFFFF;
 }
 
 void CPUWriteMemory(WORD16 address,LONG32 data) {
-	memory[(address/4) & 0x3FFFF] = data;
+	memory[(address/4) & 0x3FFFF] = data & 0xFFFFFFFF;
 }
 
 // *******************************************************************************************************************************

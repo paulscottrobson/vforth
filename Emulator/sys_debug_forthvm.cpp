@@ -25,20 +25,57 @@
 //											This renders the debug screen
 // *******************************************************************************************************************************
 
-static const char *labels[] = { "D","DF","P","X","T","IE","RP","RX","CY","BP", NULL };
+static const char *labels[] = { "PCTR","DSP","RSP","BRK", NULL };
 
 void DBGXRender(int *address,int runMode) {
-	//CPUSTATUS *s = CPUGetStatus();
+	CPUSTATUS *s = CPUGetStatus();
 	GFXSetCharacterSize(42,25);
-	DBGVerticalLabel(15,0,labels,DBGC_ADDRESS,-1);									// Draw the labels for the register
+	DBGVerticalLabel(25,0,labels,DBGC_ADDRESS,-1);									// Draw the labels for the register
 
-	GFXNumber(GRID(0,0),address[0],16,8,GRIDSIZE,DBGC_ADDRESS,-1);
-	GFXNumber(GRID(0,1),address[1],16,8,GRIDSIZE,DBGC_ADDRESS,-1);
+	GFXNumber(GRID(34,0),s->pc,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(34,1),s->dsp,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(34,2),s->rsp,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(34,3),address[3],16,5,GRIDSIZE,DBGC_DATA,-1);
 
+	for (int i = 0;i < 2;i++) {
+		int x = 25 + i*9;
+		int y = 5;
+		const char *st = (i == 0) ? "DATA":"RETURN";
+		GFXString(GRID(x+4-strlen(st)/2,y),st,GRIDSIZE,DBGC_ADDRESS,-1);
+		y++;
+		int topOfStack = (i == 0) ? RST_DSP:RST_RSP;
+		int stack = (i == 0) ? s->dsp:s->rsp;
+		int colour = DBGC_HIGHLIGHT;
+		while (stack < topOfStack && y <= 15) {
+			long n = CPUReadMemory(stack) & 0xFFFFFFFF;
+			GFXNumber(GRID(x,y),n,16,8,GRIDSIZE,colour,-1);
+			colour = DBGC_DATA;
+			y++;
+			stack += 4;
+		}
+	}
+	for (int y = 17;y < 25;y++) {
+		int addr = (address[1] + (y - 17) * 16) & 0xFFFFC;
+		GFXNumber(GRID(1,y),addr,16,8,GRIDSIZE,DBGC_ADDRESS,-1);
+		for (int x = 0;x < 4;x++) {
+			LONG32 n = CPUReadMemory(addr);
+			GFXNumber(GRID(10+x*9,y),n,16,8,GRIDSIZE,DBGC_DATA,-1);
+			addr = (addr + 4) & 0xFFFFC;
+		}
+	}
+
+	for (int y = 0;y < 16;y++) {
+		int addr = (address[0]+y*4) & 0xFFFFC;
+		int isBrk = (addr == address[3]);
+		long code = CPUReadMemory(addr) & 0xFFFFFFFF;
+		GFXNumber(GRID(0,y),addr,16,5,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_ADDRESS,-1);
+		GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
+	}
 	if (runMode) {
 		SDL_Rect rc;rc.x = rc.y = 200;rc.w = rc.h = 300;
 		GFXRectangle(&rc,0xFF00FF);
 	}
+
 /*
 	#define DN(v,w) GFXNumber(GRID(18,n++),v,16,w,GRIDSIZE,DBGC_DATA,-1)			// Helper macro
 

@@ -19,10 +19,13 @@ typedef unsigned char  BYTE8;
 void CPUReset(void);
 BYTE8 CPUExecuteInstruction(void);
 
+#define RST_RSP 	0x80000
+#define RST_DSP 	0x7F800
+
 #ifdef INCLUDE_DEBUGGING_SUPPORT													// Only required for debugging
 
 typedef struct __CPUSTATUS {
-	int pc,rsp,dsp,cycles;
+	long pc,rsp,dsp,cycles;
 } CPUSTATUS;
 
 CPUSTATUS *CPUGetStatus(void);

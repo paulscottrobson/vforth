@@ -37,7 +37,7 @@
 #define DEBUG_GETOVERBREAK() CPUGetStepOverBreakpoint()								// Where would we break to step over here. (0 == single step)
 
 #define DEBUG_RAMSTART 		(0x00000)												// Initial RAM address for debugger.
-#define DEBUG_SHIFT(d,v)	((((d) << 4) | v) & 0xFFFFFF)							// Shifting into displayed address.
+#define DEBUG_SHIFT(d,v)	((((d) << 4) | v) & 0xFFFFF)							// Shifting into displayed address.
 
 #define DEBUG_KEYMAP(k,r)	(k)
 
