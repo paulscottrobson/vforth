@@ -109,6 +109,8 @@ class BackEndBaseClass:
 		return self.localDictionary[name] if name in self.localDictionary else None
 	def getCurrentDefinition(self):
 		return self.loopAddress
+	def getWord(self,address):
+		return self.code[address/self.getWordSize()]
 
 	def getWordSize(self):
 		assert False,"getWordSize missing"
@@ -120,6 +122,7 @@ class BackEndBaseClass:
 		assert False,"generatePrimitive missing"
 	def generateLoop(self):
 		assert False,"generateLoop missing"
+
 
 ###############################################################################################################################################################
 #																	Back end class for virtual machine
@@ -140,7 +143,7 @@ class VMBackEnd(BackEndBaseClass):
 			self.compileWord(0x90000000-offset,"Call {0:0x}".format(address))
 	def generatePrimitive(self,prID):
 		name = self.prInfo.getPrimitiveName(prID)																# get name to validate it
-		assert name is not None,"Unknown primitive ID:"+str(word)
+		assert name is not None,"Unknown primitive ID:"+str(name)
 		self.compileWord(0xF0000000+prID,name) 																	# compile primitive, very simple.
 	def generateLoop(self):
 		offset = self.getAddress() + self.getWordSize() - self.getCurrentDefinition();							# how far back to go
@@ -173,9 +176,9 @@ class Compiler:
 					self.compileWord(w)
 
 	def compileWord(self,word):
-		prim = self.prInfo.getPrimitiveID(word)																	# get the primitive number
-		if prim is not None:																					# primitive ?
-			self.backEnd.generatePrimitive(prim)
+		prID = self.prInfo.getPrimitiveID(word) 																# is word a primitive ?
+		if prID is not None:																					
+			self.backEnd.generatePrimitive(prID)
 		elif word == "$wordsize":																				# push wordsize on stack
 			self.backEnd.generateLiteral(self.backEnd.getWordSize())
 		elif word[:3] == "+++":																					# allocate working space.

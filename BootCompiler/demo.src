@@ -2,11 +2,11 @@
 //	VForth Boot
 //	
 
-:$variable 		r> ; 										// Pop the return address off and return to the outer level. 
+:$variable 		r> ; 										// Pop the return address off and return to the outer level. Will return address of literals below
 
-:$Here $variable 0 											// Next writable location
-:$Head $variable 0  										// Head of the dictionary chain.
-:base $variable 0 											// Current base
+:$Here $variable 42 										// Next writable location
+:$Head $variable 42  										// Head of the dictionary chain.
+:base $variable 42 											// Current base
 
 //
 //	The system is booted with the base address on the stack. Read the first word and save as $here, read the second and save as $head
@@ -25,3 +25,10 @@
 :>=  < not ;
 :<=  > not ;
 :#   0= 0= ;
+
+:, 	$Here ! $WordSize $Here +! ; 							// Define the compile word to dictionary word.
+
+
+: r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
+: >r 	>r >r swap r> ;
+: ; 	drop ; 
