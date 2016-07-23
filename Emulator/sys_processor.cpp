@@ -34,8 +34,14 @@ static LONG32 dsp;
 static LONG32 cycles;
 
 // *******************************************************************************************************************************
-//													   Port Interfaces
+//															Stack
 // *******************************************************************************************************************************
+
+#define PUSHD(v) { dsp -= 4;memory[dsp >> 2] = (v); }
+#define PUSHR(v) { rsp -= 4;memory[rsp >> 2] = (v); }
+
+#define PULLD(v,tgt) { tgt = memory[dsp >> 2];dsp += 4; }
+#define PULLR(v,tgt) { tgt = memory[rsp >> 2];rsp += 4; }
 
 // *******************************************************************************************************************************
 //														Reset the CPU
@@ -46,6 +52,10 @@ void CPUReset(void) {
 	rsp = RST_RSP;
 	dsp = RST_DSP;
 	cycles = 0;
+
+	memory[0] = 42;
+	memory[1] = -2 & 0x7FFFFFFF;
+	memory[2] = 0x80000008;
 }
 
 // *******************************************************************************************************************************
@@ -53,6 +63,32 @@ void CPUReset(void) {
 // *******************************************************************************************************************************
 
 BYTE8 CPUExecuteInstruction(void) {
+
+	LONG32 instruction = memory[pctr >> 2];											// Fetch instruction
+	pctr = (pctr + 4) & 0xFFFFC;													// Bump PC
+
+	switch (instruction >> 28) {													// Upper 4 bits.
+
+		case 8:																		// 8x relative call forward
+			PUSHR(pctr);
+			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+			break;
+		case 9:																		// 9x relative call backward
+			PUSHR(pctr);
+			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+			break;
+		case 10:																	// Ax relative branch backward.
+			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+			break;
+		case 15:																	// Fx primitive
+			// TODO: Do primitives.
+			break;
+		default:
+			instruction = instruction & 0x7FFFFFFF;									// make 31 bit constant
+			if ((instruction & 0x40000000) != 0) instruction |= 0x80000000; 		// sign extend.
+			PUSHD(instruction);														// Push on Data Stack.
+			break;
+	}
 
 	cycles++;
 	if (cycles < CYCLES_PER_FRAME) return 0;										// Not completed a frame.
@@ -79,9 +115,7 @@ BYTE8 CPUExecute(LONG32 breakPoint) {
 // *******************************************************************************************************************************
 
 LONG32 CPUGetStepOverBreakpoint(void) {
-//	BYTE8 opcode = CPUReadMemory(R[P]);												// Current opcode.
-//	if (opcode >= 0xD0 && opcode <= 0xDF) return (R[P]+1) & 0xFFFF;					// If SEP Rx then step is one after.
-	return 0;																		// Do a normal single step
+	return (pctr+1) & 0xFFFFF;														// Instruction after next.
 }
 
 // *******************************************************************************************************************************

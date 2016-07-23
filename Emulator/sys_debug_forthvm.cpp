@@ -30,12 +30,12 @@ static const char *labels[] = { "PCTR","DSP","RSP","BRK", NULL };
 void DBGXRender(int *address,int runMode) {
 	CPUSTATUS *s = CPUGetStatus();
 	GFXSetCharacterSize(42,25);
-	DBGVerticalLabel(25,0,labels,DBGC_ADDRESS,-1);									// Draw the labels for the register
+	DBGVerticalLabel(28,0,labels,DBGC_ADDRESS,-1);									// Draw the labels for the register
 
-	GFXNumber(GRID(34,0),s->pc,16,5,GRIDSIZE,DBGC_DATA,-1);
-	GFXNumber(GRID(34,1),s->dsp,16,5,GRIDSIZE,DBGC_DATA,-1);
-	GFXNumber(GRID(34,2),s->rsp,16,5,GRIDSIZE,DBGC_DATA,-1);
-	GFXNumber(GRID(34,3),address[3],16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(37,0),s->pc,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(37,1),s->dsp,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(37,2),s->rsp,16,5,GRIDSIZE,DBGC_DATA,-1);
+	GFXNumber(GRID(37,3),address[3],16,5,GRIDSIZE,DBGC_DATA,-1);
 
 	for (int i = 0;i < 2;i++) {
 		int x = 25 + i*9;
@@ -70,6 +70,23 @@ void DBGXRender(int *address,int runMode) {
 		long code = CPUReadMemory(addr) & 0xFFFFFFFF;
 		GFXNumber(GRID(0,y),addr,16,5,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_ADDRESS,-1);
 		GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
+		char szBuffer[32];
+		strcpy(szBuffer,"?");
+		if ((code & 0x80000000) == 0) {
+			int r = code;
+			if ((r & 0x40000000) != 0) r = r - 0x80000000;
+			sprintf(szBuffer,"%d",r);
+		}
+		if ((code & 0xF0000000) == 0xA0000000) {
+			sprintf(szBuffer,"br %05x",(int)(addr+4-(code & 0xFFFFF)));
+		}
+		if ((code & 0xF0000000) == 0x80000000) {
+			sprintf(szBuffer,"call %05x",(int)(addr+4+(code & 0xFFFFF)));
+		}
+		if ((code & 0xF0000000) == 0x90000000) {
+			sprintf(szBuffer,"call %05x",(int)(addr+4-(code & 0xFFFFF)));
+		}
+		GFXString(GRID(15,y),szBuffer,GRIDSIZE,DBGC_DATA,-1);
 	}
 	if (runMode) {
 		SDL_Rect rc;rc.x = rc.y = 200;rc.w = rc.h = 300;
