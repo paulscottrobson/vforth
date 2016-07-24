@@ -29,7 +29,7 @@ typedef struct __CPUSTATUS {
 } CPUSTATUS;
 
 CPUSTATUS *CPUGetStatus(void);
-BYTE8 CPUExecute(LONG32 breakPoint);
+BYTE8 CPUExecute(LONG32 breakPoint1,LONG32 breakPoint2);
 LONG32 CPUGetStepOverBreakpoint(void);
 LONG32 CPUReadMemory(LONG32 address);
 void CPUWriteMemory(LONG32 address,LONG32 data);
