@@ -15,6 +15,9 @@
 #endif
 #include "sys_processor.h"
 #include "sys_debug_system.h"
+#include "__primitives.h"
+
+static void _CPUExecutePrimitive(BYTE8 opcode);
 
 // *******************************************************************************************************************************
 //														   Timing
@@ -56,6 +59,7 @@ void CPUReset(void) {
 	memory[0] = 42;
 	memory[1] = -2 & 0x7FFFFFFF;
 	memory[2] = 0x80000008;
+	memory[3] = 0xF0000004;
 }
 
 // *******************************************************************************************************************************
@@ -81,7 +85,7 @@ BYTE8 CPUExecuteInstruction(void) {
 			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
 		case 15:																	// Fx primitive
-			// TODO: Do primitives.
+			_CPUExecutePrimitive(instruction & 0xFF);
 			break;
 		default:
 			instruction = instruction & 0x7FFFFFFF;									// make 31 bit constant
@@ -94,6 +98,77 @@ BYTE8 CPUExecuteInstruction(void) {
 	if (cycles < CYCLES_PER_FRAME) return 0;										// Not completed a frame.
 	cycles = cycles - CYCLES_PER_FRAME;												// Adjust this frame rate.
 	return FRAME_RATE;																// Return frame rate.
+}
+
+// *******************************************************************************************************************************
+//												Execute primitives
+// *******************************************************************************************************************************
+
+static void _CPUExecutePrimitive(BYTE8 opcode) {
+	switch (opcode) {
+		case OP_READ:
+			break;
+		case OP_STORE:
+			break;
+		case OP_C_READ:
+			break;
+		case OP_C_STORE:
+			break;
+		case OP_ADD_STORE:
+			break;
+		case OP_ADD:
+			break;
+		case OP_SUB:
+			break;
+		case OP_MUL:
+			break;
+		case OP_DIV:
+			break;
+		case OP_AND:
+			break;
+		case OP_OR:
+			break;
+		case OP_XOR:
+			break;
+		case OP_NOT:
+			break;
+		case OP_0_EQUALS:
+			break;
+		case OP_0_GREATER:
+			break;
+		case OP_0_LESS:
+			break;
+		case OP_0_SUB:
+			break;
+		case OP_1_ADD:
+			break;
+		case OP_1_SUB:
+			break;
+		case OP_2_MUL:
+			break;
+		case OP_2_DIV:
+			break;
+		case OP_DUP:
+			break;
+		case OP_DROP:
+			break;
+		case OP_SWAP:
+			break;
+		case OP_ROT:
+			break;
+		case OP_OVER:
+			break;
+		case OP_SEMICOLON:
+			break;
+		case OP_FROM_R:
+			break;
+		case OP_TO_R:
+			break;
+		case OP_NOTEQUALS_0IF:
+			break;
+		case OP_DOLLAR_HWIO:
+			break;
+	}
 }
 
 #ifdef INCLUDE_DEBUGGING_SUPPORT

@@ -21,6 +21,9 @@
 #define DBGC_DATA 		(0x0FF)														// (Background is in main.c)
 #define DBGC_HIGHLIGHT 	(0xFF0)
 
+#define PRIMITIVE_STATIC
+#include "__primitives.h"
+
 // *******************************************************************************************************************************
 //											This renders the debug screen
 // *******************************************************************************************************************************
@@ -71,22 +74,31 @@ void DBGXRender(int *address,int runMode) {
 		GFXNumber(GRID(0,y),addr,16,5,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_ADDRESS,-1);
 		GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
 		char szBuffer[32];
+		int colour = DBGC_DATA;
 		strcpy(szBuffer,"?");
 		if ((code & 0x80000000) == 0) {
 			int r = code;
 			if ((r & 0x40000000) != 0) r = r - 0x80000000;
 			sprintf(szBuffer,"%d",r);
+			colour = 0xF80;
 		}
 		if ((code & 0xF0000000) == 0xA0000000) {
 			sprintf(szBuffer,"br %05x",(int)(addr+4-(code & 0xFFFFF)));
 		}
 		if ((code & 0xF0000000) == 0x80000000) {
 			sprintf(szBuffer,"call %05x",(int)(addr+4+(code & 0xFFFFF)));
+			colour = 0xFF0;
 		}
 		if ((code & 0xF0000000) == 0x90000000) {
 			sprintf(szBuffer,"call %05x",(int)(addr+4-(code & 0xFFFFF)));
+			colour = 0xFF0;
 		}
-		GFXString(GRID(15,y),szBuffer,GRIDSIZE,DBGC_DATA,-1);
+		if ((code & 0xF0000000) == 0xF0000000) {
+			int opcode = code & 0xFF;
+			if (opcode < COUNT_PRIMITIVES) strcpy(szBuffer,_primitives[opcode]);
+			colour = 0xF0F;
+		}
+		GFXString(GRID(15,y),szBuffer,GRIDSIZE,colour,-1);
 	}
 	if (runMode) {
 		SDL_Rect rc;rc.x = rc.y = 200;rc.w = rc.h = 300;

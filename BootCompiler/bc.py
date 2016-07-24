@@ -35,6 +35,7 @@ class PrimitiveStore:
 		word = word.replace("@","_read_").replace("!","_store_").replace("+","_add_").replace("-","_sub_")
 		word = word.replace("*","_mul_").replace("/","_div_").replace("=","_equals_")
 		word = word.replace(">","_greater_").replace("<","_less_").replace("#","_notequals_")
+		word = word.replace("$","_dollar_")
 		while word.find("__") >= 0:
 			word = word.replace("__","_")
 		if word[0] == '_':
@@ -200,6 +201,7 @@ class Compiler:
 
 backEnd = VMBackEnd(True)
 cm = Compiler(backEnd)
-for f in sys.argv[1:]:
-	cm.compileFile(f)
-backEnd.write("a.out","__boot.h")
+if len(sys.argv) > 1:
+	for f in sys.argv[1:]:
+		cm.compileFile(f)
+	backEnd.write("a.out","__boot.h")
