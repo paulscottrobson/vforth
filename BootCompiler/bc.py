@@ -205,3 +205,6 @@ if len(sys.argv) > 1:
 	for f in sys.argv[1:]:
 		cm.compileFile(f)
 	backEnd.write("a.out","__boot.h")
+
+# TODO: 3rd word (for main)
+# TODO: Not compiling headers for __ words (?)

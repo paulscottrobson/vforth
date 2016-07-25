@@ -24,6 +24,12 @@
 #define PRIMITIVE_STATIC
 #include "__primitives.h"
 
+static BYTE8 __fontData[] = {
+	#include "__font7x9_mcmfont.h"
+};
+
+static WORD16 __colours[8] = { 0x000,0xF00,0x0F0,0xFF0,0x00F,0xF0F,0x0FF,0xFFF };
+
 // *******************************************************************************************************************************
 //											This renders the debug screen
 // *******************************************************************************************************************************
@@ -101,93 +107,43 @@ void DBGXRender(int *address,int runMode) {
 		GFXString(GRID(15,y),szBuffer,GRIDSIZE,colour,-1);
 	}
 	if (runMode) {
-		SDL_Rect rc;rc.x = rc.y = 200;rc.w = rc.h = 300;
-		GFXRectangle(&rc,0xFF00FF);
-	}
+		int szx = 4,szy = 3;
+		SDL_Rect rcDisplay,rcCharacter,rcPixel,rcFrame;		
+		rcDisplay.w = szx * 8 * 32;rcDisplay.h = szy * 14 * 16;
+		rcDisplay.x = WIN_WIDTH/2-rcDisplay.w/2;
+		rcDisplay.y = WIN_HEIGHT-64-rcDisplay.h;
+		rcFrame = rcDisplay;
+		rcFrame.w += 16;rcFrame.h +=16;rcFrame.x -= 8;rcFrame.y -= 8;
 
-/*
-	#define DN(v,w) GFXNumber(GRID(18,n++),v,16,w,GRIDSIZE,DBGC_DATA,-1)			// Helper macro
+		rcCharacter.w = 8 * szx;rcCharacter.h = 8 * szy;
+		rcPixel.w = szx;rcPixel.h = szy;
+		GFXRectangle(&rcFrame,0x0);
+		for (int y = 0;y < 16;y++) {
+			rcCharacter.x = rcDisplay.x;
+			for (int x = 0;x < 32;x++) {
+				int ch = (x+y*27);
+				int col = (x+y);
+				ch = ch & 0x7F;col = __colours[col & 7];
 
-	n = 0;
-	DN(s->d,2);DN(s->df,1);DN(s->p,1);DN(s->x,1);DN(s->t,2);DN(s->ie,1);			// Registers
-	DN(s->pc,4);DN(s->r[s->x],4);DN(s->cycles,4);DN(address[3],4);					// Others
-
-	for (int i = 0;i < 16;i++) {													// 16 bit registers
-		sprintf(buffer,"R%x",i);
-		GFXString(GRID(i % 4 * 8,i/4+12),buffer,GRIDSIZE,DBGC_ADDRESS,-1);
-		GFXString(GRID(i % 4 * 8+2,i/4+12),":",GRIDSIZE,DBGC_HIGHLIGHT,-1);
-		GFXNumber(GRID(i % 4 * 8+3,i/4+12),s->r[i],16,4,GRIDSIZE,DBGC_DATA,-1);
-	}
-
-	int a = address[1];																// Dump Memory.
-	for (int row = 17;row < 23;row++) {
-		GFXNumber(GRID(2,row),a,16,4,GRIDSIZE,DBGC_ADDRESS,-1);
-		GFXCharacter(GRID(6,row),':',GRIDSIZE,DBGC_HIGHLIGHT,-1);
-		for (int col = 0;col < 8;col++) {
-			GFXNumber(GRID(7+col*3,row),CPUReadMemory(a),16,2,GRIDSIZE,DBGC_DATA,-1);
-			a = (a + 1) & 0xFFFF;
-		}		
-	}
-
-	int p = address[0];																// Dump program code. 
-	int opc;
-
-	for (int row = 0;row < 11;row++) {
-		int isPC = (p == ((s->pc) & 0xFFFF));										// Tests.
-		int isBrk = (p == address[3]);
-		GFXNumber(GRID(0,row),p,16,4,GRIDSIZE,isPC ? DBGC_HIGHLIGHT:DBGC_ADDRESS,	// Display address / highlight / breakpoint
-																	isBrk ? 0xF00 : -1);
-		opc = CPUReadMemory(p);p = (p + 1) & 0xFFFF;								// Read opcode.
-		strcpy(buffer,_mnemonics[opc]);												// Work out the opcode.
-		char *at = buffer+strlen(buffer)-2;											// 2nd char from end
-		if (*at == '.') {															// Operand ?
-			if (at[1] == '1') {
-				sprintf(at,"%02x",CPUReadMemory(p));
-				p = (p+1) & 0xFFFF;
-			}
-		}
-		GFXString(GRID(5,row),buffer,GRIDSIZE,isPC ? DBGC_HIGHLIGHT:DBGC_DATA,-1);	// Print the mnemonic
-	}
-
-
-	int width = 64;																	// Get screen display resolution.
-	int height = 32;
-	int ramAddress = HWIGetDisplayAddress();
-
-	SDL_Rect rc;rc.x = _GFXX(21);rc.y = _GFXY(1)/2;									// Whole rectangle.
-	rc.w = 11 * GRIDSIZE * 6;rc.h = 5 *GRIDSIZE * 8; 										
-	if (runMode != 0) {
-		rc.w = WIN_WIDTH * 8 / 10;rc.h = WIN_HEIGHT * 4/10;
-		rc.x = WIN_WIDTH/2-rc.w/2;rc.y = WIN_HEIGHT - rc.h - 64;
-	}
-	rc.w = rc.w/64*64;rc.h = rc.h/32*32;											// Make it /64 /32
-
-	if (!HWIIsScreenOn()) {															// Screen off, show static.
-		SDL_Rect rcp;		
-		rcp.w = rcp.h = rc.w/256;if (rcp.w == 0) rcp.w = rcp.h = 1;
-		GFXRectangle(&rc,0x00000000);
-		for (rcp.x = rc.x;rcp.x <= rc.x+rc.w;rcp.x += rcp.w)
-			for (rcp.y = rc.y;rcp.y <= rc.y+rc.h;rcp.y += rcp.h) {
-				if (rand() & 1) GFXRectangle(&rcp,0xFFFFFF);
-			}
-		return;		
-	}
-
-	SDL_Rect rcPixel;rcPixel.h = rc.h/32;rcPixel.w = rc.w / 64;						// Pixel rectangle.
-	SDL_Rect rcDraw;rcDraw.w = rcPixel.w/2;rcDraw.h = rcPixel.h/2;
-	GFXRectangle(&rc,0x0);															// Fill it black
-	for (int j = 0;j < height;j++) {
-		for (int i = 0;i < width;i += 8) {
-			BYTE8 vRam = CPUReadMemory(ramAddress++);
-			for (int b = 0;b < 8;b++) {
-				if (vRam & (0x80 >> b))
-				{
-					rcDraw.x =  rc.x + (i+b) * rcPixel.w;
-					rcDraw.y = rc.y + j * rcPixel.h;
-					GFXRectangle(&rcDraw,0xFFFFFF);
+				rcCharacter.y = rcDisplay.y + y * 14 * szy;
+				if (ch == 0x70 || ch == 0x71 || ch == 0x79 || ch == 0x67) rcCharacter.y += 3 * szy;
+				BYTE8 *fontInfo = __fontData+ch*9;
+				if (ch != ' ') {
+					for (int y1 = 0;y1 < 9;y1++) {
+						if (*fontInfo != 0x00)
+						{
+							rcPixel.x = rcCharacter.x;
+							rcPixel.y = rcCharacter.y + szy * y1;
+							for (int x1 = 0;x1 < 8;x1++) {
+								if (*fontInfo & (0x80 >> x1)) GFXRectangle(&rcPixel,col);
+								rcPixel.x += rcPixel.w;
+							}
+						}
+					fontInfo++;
+					}
 				}
+				rcCharacter.x += rcCharacter.w;
 			}
 		}
 	}
-*/
 }	
