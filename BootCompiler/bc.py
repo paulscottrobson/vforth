@@ -172,12 +172,18 @@ class Compiler:
 		source = [x if x.find("//") < 0 else x[:x.find("//")] for x in source]									# remove comments
 		source = [x.replace("\t"," ").replace("\n"," ") for x in source]										# remove tabs and any newlines
 		source = [x.strip().lower() for x in source if x.strip() != ""]											# strip spaces, remove blank lines.
+		lastWasColon = False
 		for s in source:
 			if self.backEnd.isListing():
 				print("\nCode :: "+s)
 			for w in s.split(" "):																				# split into bits
 				if w != "":																						# ignore empty lines
-					self.compileWord(w)
+					if lastWasColon:
+						self.compileWord(":::"+w)
+					else:
+						if w != ":":
+							self.compileWord(w)
+					lastWasColon = (w == ':')
 
 	def compileWord(self,word):
 		prID = self.prInfo.getPrimitiveID(word) 																# is word a primitive ?
@@ -190,9 +196,9 @@ class Compiler:
 				self.backEnd.compileWord(0,"",True)
 		elif word == "$loop":
 			self.backEnd.generateLoop()
-		elif word[0] == ':':																					# definition header
-			assert len(word) > 1,"No definition word"
-			self.backEnd.generateHeader(word[1:])
+		elif word[:3] == ':::':																					# definition header
+			assert len(word) > 3,"No definition word"
+			self.backEnd.generateHeader(word[3:])
 		elif re.match("^\\-?\\d+$",word):																		# is it a decimal word ?
 			self.backEnd.generateLiteral(int(word))
 		elif re.match("^\\$[0-9a-f]+$",word):																	# is it a hexadecimal word ?
@@ -202,10 +208,9 @@ class Compiler:
 			assert addr is not None,"Unknown word "+word
 			self.backEnd.generateCall(addr)
 
-backEnd = VMBackEnd(True)
+backEnd = VMBackEnd(False)
 cm = Compiler(backEnd)
 if len(sys.argv) > 1:
 	for f in sys.argv[1:]:
 		cm.compileFile(f)
 	backEnd.write("a.out","__boot.h")
-	print(backEnd.code[:4])

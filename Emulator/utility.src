@@ -1,16 +1,28 @@
-:$variable 		r> ; 										// Pop the return address off and return to the outer level. Will return address of literals below
+: $variable 		r> ; 									// Pop the return address off and return to the outer level. Will return address of literals below
 
-:= 	- 0= ;													// Utility stuff.
-:> 	- 0> ;
-:< 	- 0< ;
-:>=  < not ;
-:<=  > not ;
-:#   0= 0= ;
+: here $variable ; 											// Next writable location
+: head $variable ;  										// Head of the dictionary chain.
+: base $variable ; 											// Current number base
 
-:r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
-:>r 	>r >r swap r> ;
-:; 	drop ; 
+: __init_utility	
+			dup  dup dup	 								// 2 copies of base on the stack
+			@ + Here ! 			   							// Read next free word offset, add actual base address and save $Here
+			$WordSize + @ + head ! 							// Read the offset word after that, add the actual base address and save $Head
+			10 base ! 										// Set up base to decimal.
+			;
 
-:exit r> drop ;												// allows #0if exit 
+: = 	- 0= ;												// Utility stuff.
+: > 	- 0> ;
+: < 	- 0< ;
+: >=  < not ;
+: <=  > not ;
+: #   0= 0= ;
+: mod over over / * - ;
 
-:__stop $loop ;
+: r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
+: >r 	>r >r swap r> ;
+: ; 	drop ; 
+
+: exit r> drop ;											// allows #0if exit 
+
+: __stop $loop ;

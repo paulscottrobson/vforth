@@ -2,50 +2,16 @@
 //	VForth Boot
 //	
 
-:$variable 		r> ; 										// Pop the return address off and return to the outer level. Will return address of literals below
 
-:$Here $variable 42 										// Next writable location
-:$Head $variable 42  										// Head of the dictionary chain.
-:$base $variable 42 										// Current base
 
 //
 //	The system is booted with the base address on the stack. Read the first word and save as $here, read the second and save as $head
 //	call this word first.
 //
 
-:__Setup	dup  dup dup	 								// 2 copies of base on the stack
-			@ + $Here ! 									// Read next free word offset, add actual base address and save $Here
-			$WordSize + @ + $Head ! 						// Read the offset word after that, add the actual base address and save $Head
-			10 $base ! 										// Set up base to decimal.
+:__setup	dup  dup dup	 								// 2 copies of base on the stack
+			@ + Here ! 			   							// Read next free word offset, add actual base address and save $Here
+			$WordSize + @ + head ! 							// Read the offset word after that, add the actual base address and save $Head
+			10 base ! 										// Set up base to decimal.
 			;
 
-:= 	- 0= ;													// Utility stuff.
-:> 	- 0> ;
-:< 	- 0< ;
-:>=  < not ;
-:<=  > not ;
-:#   0= 0= ;
-
-:, 	$Here ! $WordSize $Here +! ; 							// Define the compile word to dictionary word.
-
-
-:r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
-:>r 	>r >r swap r> ;
-:; 	drop ; 
-
-:__fillNext 												// (data addr -- data addr+1)
-	over over 1 $hwio 2 $hwio 1+ ;
-:__fillNext8
-	__fillNext __fillNext __fillNext __fillNext __fillNext __fillNext __fillNext __fillNext ;
-:__fillNext64
-	__fillNext8 __fillNext8 __fillNext8 __fillNext8 __fillNext8 __fillNext8 __fillNext8 __fillNext8 ;
-:clearScreen
-	0 __fillNext64 __fillNext64 __fillNext64 __fillNext64 __fillNext64 __fillNext64 __fillNext64 __fillNext64 drop drop ;
-
-:__stop $loop ;
-
-:__main __Setup 
-	7 256 * 42 + clearScreen __stop
-
-
-__stop ;
