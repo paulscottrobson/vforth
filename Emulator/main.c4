@@ -14,6 +14,8 @@
 
 : sayOk 79 emit 107 emit cr ;													// Print OK <CR>
 
-: testemit keyWithCursor emit $loop ;
-: __main $__init_utility $__init_video clearscreen cyan sayok white 24 . 1403 . -32 . 2 __colour ! testemit ;
+: testemit input_colour sayOk $loop ;
+
+: __main $__init_utility $__init_video clearscreen 
+			testemit __stop ;	
 

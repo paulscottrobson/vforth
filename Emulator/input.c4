@@ -1,0 +1,60 @@
+//
+//		Input Area / Editor
+//
+
+: ciBuffer $variable ; +++130 												// Needs to be enough to fit all text in it.
+: ciCursor $variable ; 														// Current cursor position in buffer.
+
+: __colour_execute $300 ;													// Colours for various entry types.
+: __colour_compile $200 ;
+: __colour_definition $100 ;
+: __colour_comment $700 ;
+
+: __key_execute 5 ;															// Key codes for changing entry type
+: __key_compile 3 ;
+: __key_comment 1 ;
+: __key_definition 4 ;
+
+: __yEditArea height editarea - width * ;
+
+: __input_clear 0 ciCursor !
+	$620 __yEditArea __fillcopy drop drop  ;
+
+: __set_input_cursor __yEditArea ciCursor @ + screen! ;
+
+: __cCurrentBuffer ciCursor @ 2* 2* ciBuffer + ;
+
+: __get_last_colour __colour_execute ciCursor @ 0= #0if exit drop __cCurrentBuffer 4 - @ $FF00 and ;
+
+: __switchCompile drop drop __colour_compile 32 ;							// Switch colour key to new colour key
+: __switchExecute drop drop __colour_execute 32 ;
+: __switchDefinition drop drop __colour_definition 32 ;
+: __switchComment drop drop __colour_comment 32 ;
+
+: __backspace drop r> drop ciCursor @ 0= #0if exit -1 ciCursor +! exit ;	// Process backspace
+: __carriageReturn drop r> drop 0 __cCurrentBuffer ! -1 ciCursor ! exit ;	// Process CR (cursor = -1 exit flag)
+
+: __get_input 
+		__get_last_colour $7F or __set_input_cursor 
+		key $320 __set_input_cursor 										// Get a keystroke.		
+
+		dup 8 = #0if __backspace 											// 8 does a backspace.
+		dup 13 = #0if __carriageReturn 										// 13 does a carriage return.
+
+		__get_last_colour 													// Get last colour unless we change it
+		swap 																// key on TOS, new colour 2nd.
+
+		dup __key_compile = #0if __switchCompile							// ^C switches to compile.
+		dup __key_execute = #0if __switchExecute							// ^E switches to execute
+		dup __key_definition = #0if __switchDefinition						// ^D switches to definition
+		dup __key_comment  = #0if __switchComment							// ^A switches to comment.
+
+		or 																	// Set colour
+		dup __cCurrentBuffer !  											// Update buffer. 
+		__yEditArea ciCursor @ + screen! 1 ciCursor +!  					// Write to screen.
+		ciCursor @ editarea width * < #0if exit 							// Keep in range.
+		editarea width * 1- ciCursor ! ;
+
+: __input_tillCR __get_input ciCursor @ 0< #0if exit $loop ;
+
+: input_colour __input_clear __input_tillCR ;

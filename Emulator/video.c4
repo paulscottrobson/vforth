@@ -15,7 +15,7 @@
 
 : screen! 1 $hwio 2 $hwio ; 													// write to display (addr chcl -)
 : __fillcopy over over screen! 													// tail recursive screen fill.
-					dup height width * = #0if exit 1+ $loop  
+					1+ dup height width * = #0if exit $loop  
 
 : fillscreen 0 __fillcopy drop drop home ;  									// clear screen with character (fill - )
 							
@@ -28,10 +28,10 @@
 : __checkOff __cursor @ height editarea - width * >= #0if clearscreen ;			// Check if wrap needed.
 
 : __printReturn 																// Print return (return - )
-	r> drop __cursor @  width + $FFFF width - 1+ and __cursor ! __checkOff ;
+	drop r> drop __cursor @  width + $FFFF width - 1+ and __cursor ! __checkOff ;
 
 : __printBackspace																// Print backspace (backspace - )
-	r> drop __cursor @ width 1- and 0= #0if exit 								// abandon if can't back space
+	drop r> drop __cursor @ width 1- and 0= #0if exit 							// abandon if can't back space
 	-1 __cursor +! ;
 
 : __printControl r> drop 														// Handle control keys (key - )
