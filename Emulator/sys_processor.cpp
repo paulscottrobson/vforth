@@ -10,11 +10,10 @@
 // *******************************************************************************************************************************
 
 #include <stdlib.h>
-#ifdef WINDOWS
 #include <stdio.h>
-#endif
 #include "sys_processor.h"
 #include "sys_debug_system.h"
+#include "hardware.h"
 #include "__primitives.h"
 
 static void _CPUExecutePrimitive(BYTE8 opcode);
@@ -58,11 +57,24 @@ static BYTE8* bMemory = (BYTE8 *)memory;											// Access memory byte wise.
 // *******************************************************************************************************************************
 
 void CPUReset(void) {
+	HWIReset();
 	pctr = 0x00000;
 	rsp = RST_RSP;
 	dsp = RST_DSP;
 	cycles = 0;
-	memory[0] = 0xA0000004;
+
+	int n =0;
+	memory[n++] = 0x80000040;
+	memory[n++] = 0xA0000004;
+
+	n = 0x0044>>2;
+	memory[n++] = 0;
+	memory[n++] = 0xF0000000|OP_DOLLAR_HWIO;
+	memory[n++] = 0xF0000000|OP_DUP;
+	memory[n++] = 0xF0000000|OP_NOTEQUALS_0IF;
+	memory[n++] = 0xF0000000|OP_SEMICOLON;
+	memory[n++] = 0xF0000000|OP_DROP;
+	memory[n++] = 0xA000001C;
 }
 
 // *******************************************************************************************************************************
@@ -207,6 +219,12 @@ static void _CPUExecutePrimitive(BYTE8 opcode) {
 			if (n1 == 0) pctr = pctr + 4;													
 			break;
 		case OP_DOLLAR_HWIO:
+			PULLD(n1);																// Pull command
+			switch(n1) {
+				case 0: n2 = HWIGetKey();PUSHD(n2);break;							// 0 $HWIO key gets key or zero.
+				case 1:	PULLD(n2);HWIWriteScreenAddress(n2);break;					// addr 1 $HWIO sets write address
+				case 2: PULLD(n2);HWIWriteScreenMemory(n2);break;					// addr 2 $HWIO writes to screen.
+			}
 			break;
 	}
 }

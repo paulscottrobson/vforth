@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = framework\main.cpp framework\gfx.cpp framework\debugger.cpp sys_processor.cpp sys_debug_forthvm.cpp
+OBJS = framework\main.cpp framework\gfx.cpp framework\debugger.cpp sys_processor.cpp sys_debug_forthvm.cpp hardware.cpp
 #CC specifies which compiler we're using
 CC = g++
 

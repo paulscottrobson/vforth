@@ -16,6 +16,7 @@
 #include "gfx.h"
 #include "sys_processor.h"
 #include "debugger.h"
+#include "hardware.h"
 
 #define DBGC_ADDRESS 	(0x0F0)														// Colour scheme.
 #define DBGC_DATA 		(0x0FF)														// (Background is in main.c)
@@ -28,7 +29,7 @@ static BYTE8 __fontData[] = {
 	#include "__font7x9_mcmfont.h"
 };
 
-static WORD16 __colours[8] = { 0x000,0xF00,0x0F0,0xFF0,0x00F,0xF0F,0x0FF,0xFFF };
+static WORD16 __colours[8] = { 0x222,0xF00,0x0F0,0xFF0,0x00F,0xF0F,0x0FF,0xFFF };
 
 // *******************************************************************************************************************************
 //											This renders the debug screen
@@ -121,10 +122,9 @@ void DBGXRender(int *address,int runMode) {
 		for (int y = 0;y < 16;y++) {
 			rcCharacter.x = rcDisplay.x;
 			for (int x = 0;x < 32;x++) {
-				int ch = (x+y*27);
-				int col = (x+y);
-				ch = ch & 0x7F;col = __colours[col & 7];
-
+				int ch = HWIReadScreenMemory(x,y);
+				int col = __colours[(ch >> 8) & 7];
+				ch = ch & 0x7F;
 				rcCharacter.y = rcDisplay.y + y * 14 * szy;
 				if (ch == 0x70 || ch == 0x71 || ch == 0x79 || ch == 0x67) rcCharacter.y += 3 * szy;
 				BYTE8 *fontInfo = __fontData+ch*9;

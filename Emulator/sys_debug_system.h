@@ -14,6 +14,7 @@
 #ifndef _DEBUG_SYS_H
 #define _DEBUG_SYS_H
 #include "sys_processor.h"
+#include "hardware.h"
 
 #define WIN_TITLE 		"FORTH Virtual Machine Emulator"							// Initial Window stuff
 #define WIN_WIDTH		(42*8*4)
@@ -39,7 +40,7 @@
 #define DEBUG_RAMSTART 		(0x00000)												// Initial RAM address for debugger.
 #define DEBUG_SHIFT(d,v)	((((d) << 4) | v) & 0xFFFFF)							// Shifting into displayed address.
 
-#define DEBUG_KEYMAP(k,r)	(k)
+#define DEBUG_KEYMAP(k,r)	HWIProcessKey(k,r)
 
 void DBGXRender(int *address,int runMode);											// Render the debugger screen.
 void DBGXRenderDisplay(void);
