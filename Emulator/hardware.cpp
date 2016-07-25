@@ -3,7 +3,7 @@
 //
 //		Name:		hardware.cpp
 //		Purpose:	Hardware Interface
-//		Created:	21st June 2016
+//		Created:	25th July 2016
 //		Author:		Paul Robson (paul@robsons.org.uk)
 //
 // *******************************************************************************************************************************

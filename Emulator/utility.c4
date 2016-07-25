@@ -1,10 +1,11 @@
 : $variable 		r> ; 									// Pop the return address off and return to the outer level. Will return address of literals below
-
+															// This doesn't initialise like real variable does.
+															
 : here $variable ; 											// Next writable location
 : head $variable ;  										// Head of the dictionary chain.
 : base $variable ; 											// Current number base
 
-: __init_utility	
+: $__init_utility	
 			dup  dup dup	 								// 2 copies of base on the stack
 			@ + Here ! 			   							// Read next free word offset, add actual base address and save $Here
 			$WordSize + @ + head ! 							// Read the offset word after that, add the actual base address and save $Head

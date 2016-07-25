@@ -3,7 +3,7 @@
 //
 //		Name:		sys_debug_forthvm.c
 //		Purpose:	Debugger Code (System Dependent)
-//		Created:	21st June 2016
+//		Created:	25th July 2016
 //		Author:		Paul Robson (paul@robsons->org.uk)
 //
 // *******************************************************************************************************************************
@@ -100,7 +100,7 @@ void DBGXRender(int *address,int runMode) {
 		int isBrk = (addr == address[3]);
 		long code = CPUReadMemory(addr) & 0xFFFFFFFF;
 		GFXNumber(GRID(0,y),addr,16,5,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_ADDRESS,-1);
-		GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
+		//GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
 		char szBuffer[64];
 		int colour = DBGC_DATA;
 		strcpy(szBuffer,"?");
@@ -111,6 +111,9 @@ void DBGXRender(int *address,int runMode) {
 			colour = 0xF80;
 		}
 		if ((code & 0xF0000000) == 0xA0000000) {
+			sprintf(szBuffer,"br %05x",(int)(addr+4+(code & 0xFFFFF)));
+		}
+		if ((code & 0xF0000000) == 0xB0000000) {
 			sprintf(szBuffer,"br %05x",(int)(addr+4-(code & 0xFFFFF)));
 		}
 		if ((code & 0xF0000000) == 0x80000000) {
@@ -126,8 +129,8 @@ void DBGXRender(int *address,int runMode) {
 			if (opcode < COUNT_PRIMITIVES) strcpy(szBuffer,_primitives[opcode]);
 			colour = 0xF0F;
 		}
-		szBuffer[10] = '\0';
-		GFXString(GRID(15,y),szBuffer,GRIDSIZE,colour,-1);
+		szBuffer[32] = '\0';
+		GFXString(GRID(6,y),szBuffer,GRIDSIZE,colour,-1);
 	}
 	if (runMode) {
 		int szx = 4,szy = 3;

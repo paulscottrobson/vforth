@@ -1,3 +1,6 @@
+//
+//	Colour Video Input/Out, Keyboard reading routines.
+//
 
 : height 16 ; : width 32 ; 														// screen dimensions.
 : editarea 4 ; 																	// lines for edit area
@@ -10,7 +13,8 @@
 
 : home 0 __cursor ! ; 															// home cursor 
 
-: __fillcopy over over 1 $hwio 2 $hwio 											// tail recursive screen fill.
+: screen! 1 $hwio 2 $hwio ; 													// write to display (addr chcl -)
+: __fillcopy over over screen! 													// tail recursive screen fill.
 					dup height width * = #0if exit 1+ $loop  
 
 : fillscreen 0 __fillcopy drop drop home ;  									// clear screen with character (fill - )
@@ -19,7 +23,7 @@
 	
 : cursor width * + __cursor ! ;													// cursor position (x y -)
 
-: __setVisibleCursor  __cursor @ 1 $hwio 2 $hwio ; 								// Draw cursor in given colour (chcl -)
+: __setVisibleCursor  __cursor @ screen! ; 										// Draw cursor in given colour (chcl -)
 
 : __checkOff __cursor @ height editarea - width * >= #0if clearscreen ;			// Check if wrap needed.
 
@@ -40,11 +44,11 @@
 : emit																			// Print character supports bs/cr (chcl -)
 	dup 127 and 32 < #0if __printControl 										// If control, print them.
 	__colour @ 7 and 256 * or 													// Colour them.
-	__cursor @ 1 $hwio 2 $hwio 1 __cursor +! __checkOff ; 						// write character out and advance.
+	__cursor @ screen! 1 __cursor +! __checkOff ; 								// write character out and advance.
 ;
 
 : key 0 $hwio dup #0if exit drop $loop ;										// get a keystroke ( - key)
 
-: getkeyWithCursor $5FF __setVisibleCursor key $720 __setVisibleCursor ;		// Get key with cursor display
+: keyWithCursor $5FF __setVisibleCursor key $720 __setVisibleCursor ;			// Get key with cursor display
 
-: __init_video clearscreen white ;
+: $__init_video clearscreen white ;

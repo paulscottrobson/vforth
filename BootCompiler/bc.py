@@ -151,7 +151,7 @@ class VMBackEnd(BackEndBaseClass):
 		self.compileWord(0xF0000000+prID,name) 																	# compile primitive, very simple.
 	def generateLoop(self):
 		offset = self.getAddress() + self.getWordSize() - self.getCurrentDefinition();							# how far back to go
-		self.compileWord(0xA0000000+offset,"Restart")
+		self.compileWord(0xB0000000+offset,"Restart")
 	def getWordSize(self):
 		return 4
 

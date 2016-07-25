@@ -1,9 +1,9 @@
 // *******************************************************************************************************************************
 // *******************************************************************************************************************************
 //
-//		Name:		processor.c
+//		Name:		sys_processor.c
 //		Purpose:	Processor Emulation.
-//		Created:	21st June 2016
+//		Created:	25th July 2016
 //		Author:		Paul Robson (paul@robsons.org.uk)
 //
 // *******************************************************************************************************************************
@@ -62,9 +62,10 @@ void CPUReset(void) {
 	rsp = RST_RSP;
 	dsp = RST_DSP;
 	cycles = 0;
+	int base = 0;																	// We can test the relocation.
 
-	pctr = memory[2];																// Get the start address
-	PUSHD(0); 																		// Get the base address
+	pctr = memory[base/4+2]+base;													// Get the start address
+	PUSHD(base); 																	// Get the base address
 }
 
 // *******************************************************************************************************************************
@@ -86,7 +87,10 @@ BYTE8 CPUExecuteInstruction(void) {
 			PUSHR(pctr);
 			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
-		case 10:																	// Ax relative branch backward.
+		case 10:																	// Ax relative branch forward.
+			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+			break;
+		case 11:																	// Ax relative branch backward.
 			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
 		case 15:																	// Fx primitive
@@ -264,6 +268,7 @@ void CPUWriteMemory(WORD16 address,LONG32 data) {
 void CPULoadBinary(const char *fileName) {
 	FILE *f = fopen(fileName,"rb");
 	BYTE8 *ram = (BYTE8 *)memory;
+	ram += 0;
 	while (!feof(f)) {
 		fread(ram,1,16384,f);
 		ram += 16384;

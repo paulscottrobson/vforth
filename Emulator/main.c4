@@ -1,4 +1,4 @@
-: __adjustHex 39 + ;															
+: __adjustHex 39 + ;															// Convert 10-15 (hex) to a-f (ascii)
 
 : _u. 																			// Requires because must return word.
 	dup base @ / dup 0> #0if _u. drop base @ mod 								// for drop following _u.
@@ -10,5 +10,10 @@
 
 : . dup 0< #0if __. u. ; 														// Print tos signed (n - )
 
-: testemit getkeyWithCursor emit $loop ;
-: __main __init_utility __init_video clearscreen 0 6 cursor 24 . 1403 . -32 . 2 __colour ! testemit ;
+: cr 13 emit ;																	// Print a CR
+
+: sayOk 79 emit 107 emit cr ;													// Print OK <CR>
+
+: testemit keyWithCursor emit $loop ;
+: __main $__init_utility $__init_video clearscreen cyan sayok white 24 . 1403 . -32 . 2 __colour ! testemit ;
+
