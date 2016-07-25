@@ -57,6 +57,7 @@ class BackEndBaseClass:
 		self.localDictionary = {} 																				# local dictionary copy.
 		self.compileWord(0,"(Total size of code)")																# header words
 		self.compileWord(0,"(Head of dictionary linked list)")
+		self.compileWord(0,"(Offset of first word)")
 
 	def getAddress(self):
 		return self.address
@@ -104,6 +105,8 @@ class BackEndBaseClass:
 			letters += c
 		self.compileWord(currentWord,"dict:"+letters)
 		self.localDictionary[name] = self.getAddress()															# save execution adddress
+		if name == "__main":
+			self.code[2] = self.getAddress()
 		self.loopAddress = self.getAddress() 																	# the loop address for this.
 
 	def findDictionaryEntry(self,name):
@@ -205,6 +208,6 @@ if len(sys.argv) > 1:
 	for f in sys.argv[1:]:
 		cm.compileFile(f)
 	backEnd.write("a.out","__boot.h")
-
+	print(backEnd.code[:4])
 # TODO: 3rd word (for main)
 # TODO: Not compiling headers for __ words (?)

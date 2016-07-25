@@ -63,18 +63,8 @@ void CPUReset(void) {
 	dsp = RST_DSP;
 	cycles = 0;
 
-	int n =0;
-	memory[n++] = 0x80000040;
-	memory[n++] = 0xA0000004;
-
-	n = 0x0044>>2;
-	memory[n++] = 0;
-	memory[n++] = 0xF0000000|OP_DOLLAR_HWIO;
-	memory[n++] = 0xF0000000|OP_DUP;
-	memory[n++] = 0xF0000000|OP_NOTEQUALS_0IF;
-	memory[n++] = 0xF0000000|OP_SEMICOLON;
-	memory[n++] = 0xF0000000|OP_DROP;
-	memory[n++] = 0xA000001C;
+	pctr = memory[2];																// Get the start address
+	PUSHD(0); 																		// Get the base address
 }
 
 // *******************************************************************************************************************************
@@ -272,9 +262,13 @@ void CPUWriteMemory(WORD16 address,LONG32 data) {
 #include <stdio.h>
 
 void CPULoadBinary(const char *fileName) {
-//	FILE *f = fopen(fileName,"rb");
-//	fread(ramMemory,1,MEMORYSIZE,f);
-//	fclose(f);
+	FILE *f = fopen(fileName,"rb");
+	BYTE8 *ram = (BYTE8 *)memory;
+	while (!feof(f)) {
+		fread(ram,1,16384,f);
+		ram += 16384;
+	}
+	fclose(f);
 }
 
 // *******************************************************************************************************************************

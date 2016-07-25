@@ -18,6 +18,7 @@
 int main(int argc,char *argv[]) {
 	DEBUG_RESET();
 	DEBUG_ARGUMENTS(argc,argv);
+	DEBUG_RESET();
 	GFXOpenWindow(WIN_TITLE,WIN_WIDTH,WIN_HEIGHT,WIN_BACKCOLOUR);
 	GFXStart();
 	GFXCloseWindow();

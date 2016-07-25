@@ -29,7 +29,7 @@
 #define OP_FROM_R (27)
 #define OP_TO_R (28)
 #define OP_NOTEQUALS_0IF (29)
-#define OP_$HWIO (30)
+#define OP_DOLLAR_HWIO (30)
 #ifdef PRIMITIVE_STATIC
 static const char *_primitives[] = {"@","!","c@","c!","+!","+","-","*","/","and","or","xor","not","0=","0>","0<","0-","1+","1-","2*","2/","dup","drop","swap","rot","over",";","r>",">r","#0if","$hwio"};
 #endif

@@ -31,6 +31,27 @@ static BYTE8 __fontData[] = {
 
 static WORD16 __colours[8] = { 0x222,0xF00,0x0F0,0xFF0,0x00F,0xF0F,0x0FF,0xFFF };
 
+static char wordBuffer[64];
+
+// *******************************************************************************************************************************
+//								Decode a call target by working back through the text
+// *******************************************************************************************************************************
+
+static char *__DBGDecodeCall(int address) {
+	char *p = wordBuffer+63;
+	address = address-4;
+	*(--p) = '\0';
+	do {
+		LONG32 word = CPUReadMemory(address) & 0x7FFFFFFF;
+		while (word != 0) {
+			*(--p) = word & 0xFF;
+			word = word >> 8;
+		}
+		address = address - 4;
+	} while ((CPUReadMemory(address) & 0x80000000) != 0);
+	return p;
+}
+
 // *******************************************************************************************************************************
 //											This renders the debug screen
 // *******************************************************************************************************************************
@@ -48,7 +69,7 @@ void DBGXRender(int *address,int runMode) {
 	GFXNumber(GRID(37,3),address[3],16,5,GRIDSIZE,DBGC_DATA,-1);
 
 	for (int i = 0;i < 2;i++) {
-		int x = 25 + i*9;
+		int x = 26 + i*9;
 		int y = 5;
 		const char *st = (i == 0) ? "DATA":"RETURN";
 		GFXString(GRID(x+4-strlen(st)/2,y),st,GRIDSIZE,DBGC_ADDRESS,-1);
@@ -66,10 +87,10 @@ void DBGXRender(int *address,int runMode) {
 	}
 	for (int y = 17;y < 25;y++) {
 		int addr = (address[1] + (y - 17) * 16) & 0xFFFFC;
-		GFXNumber(GRID(1,y),addr,16,8,GRIDSIZE,DBGC_ADDRESS,-1);
+		GFXNumber(GRID(2,y),addr,16,5,GRIDSIZE,DBGC_ADDRESS,-1);
 		for (int x = 0;x < 4;x++) {
 			LONG32 n = CPUReadMemory(addr);
-			GFXNumber(GRID(10+x*9,y),n,16,8,GRIDSIZE,DBGC_DATA,-1);
+			GFXNumber(GRID(8+x*9,y),n,16,8,GRIDSIZE,DBGC_DATA,-1);
 			addr = (addr + 4) & 0xFFFFC;
 		}
 	}
@@ -80,7 +101,7 @@ void DBGXRender(int *address,int runMode) {
 		long code = CPUReadMemory(addr) & 0xFFFFFFFF;
 		GFXNumber(GRID(0,y),addr,16,5,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_ADDRESS,-1);
 		GFXNumber(GRID(6,y),code,16,8,GRIDSIZE,isBrk ? DBGC_HIGHLIGHT:DBGC_DATA,-1);
-		char szBuffer[32];
+		char szBuffer[64];
 		int colour = DBGC_DATA;
 		strcpy(szBuffer,"?");
 		if ((code & 0x80000000) == 0) {
@@ -93,11 +114,11 @@ void DBGXRender(int *address,int runMode) {
 			sprintf(szBuffer,"br %05x",(int)(addr+4-(code & 0xFFFFF)));
 		}
 		if ((code & 0xF0000000) == 0x80000000) {
-			sprintf(szBuffer,"call %05x",(int)(addr+4+(code & 0xFFFFF)));
+			strcpy(szBuffer,__DBGDecodeCall((int)(addr+4+(code & 0xFFFFF))));
 			colour = 0xFF0;
 		}
 		if ((code & 0xF0000000) == 0x90000000) {
-			sprintf(szBuffer,"call %05x",(int)(addr+4-(code & 0xFFFFF)));
+			strcpy(szBuffer,__DBGDecodeCall((int)(addr+4-(code & 0xFFFFF))));
 			colour = 0xFF0;
 		}
 		if ((code & 0xF0000000) == 0xF0000000) {
@@ -105,6 +126,7 @@ void DBGXRender(int *address,int runMode) {
 			if (opcode < COUNT_PRIMITIVES) strcpy(szBuffer,_primitives[opcode]);
 			colour = 0xF0F;
 		}
+		szBuffer[10] = '\0';
 		GFXString(GRID(15,y),szBuffer,GRIDSIZE,colour,-1);
 	}
 	if (runMode) {
