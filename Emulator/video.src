@@ -1,0 +1,36 @@
+
+
+:_cursor $variable ; 
+
+:getkey 0 $hwio dup #0if exit drop $loop ;						// get a keystroke ( - key)
+
+:home 0 _cursor ! ; 											// home cursor 
+
+:height 16 ; :width 32 ; 										// screen sizes
+		
+:__fillcopy over over 1 $hwio 2 $hwio 							// tail recursive screen fill.
+					dup height width * = #0if exit 1+ $loop  
+
+:fillscreen 0 __fillcopy drop drop home ;  						// clear screen with character (fill - )
+							
+:clearScreen 32 fillscreen ; 									// clear screen ( - )						
+
+:cursor width * + _cursor ! ;									// cursor position (x y -)
+
+:__recol swap 127 and or ;										// recolour character.
+
+:red 256 __recol ; :green 512 __recol ; :yellow 768 __recol ; 	// set character colours (ch - chcl)
+:blue 1024 __recol ; :magenta 1280 __recol :cyan 1536 __recol ; :white 1792 __recol ;
+
+:__printcr r> drop												// handle CR
+	drop _cursor @ -1 width - 1+ and width + _cursor ! ;
+
+:printchar 
+	dup 255 and 13 = #0if __printcr 
+	_cursor @ 1 $hwio 2 $hwio 1 _cursor +! ;					// print character (chcl -)
+
+:echo getkey green printchar $loop ;
+
+:__main clearscreen 0 79 yellow	 printchar 107 yellow printchar echo ;
+
+__stop ;

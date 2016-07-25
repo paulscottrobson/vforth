@@ -209,5 +209,6 @@ if len(sys.argv) > 1:
 		cm.compileFile(f)
 	backEnd.write("a.out","__boot.h")
 	print(backEnd.code[:4])
+
 # TODO: 3rd word (for main)
-# TODO: Not compiling headers for __ words (?)
+# TODO: hexadecimal constants &xxxxxx

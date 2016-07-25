@@ -1,2 +1,2 @@
-python ..\BootCompiler\bc.py demo.src
+python ..\BootCompiler\bc.py utility.src video.src
 vmforth.exe a.out

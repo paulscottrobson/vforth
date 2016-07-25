@@ -1,0 +1,16 @@
+:$variable 		r> ; 										// Pop the return address off and return to the outer level. Will return address of literals below
+
+:= 	- 0= ;													// Utility stuff.
+:> 	- 0> ;
+:< 	- 0< ;
+:>=  < not ;
+:<=  > not ;
+:#   0= 0= ;
+
+:r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
+:>r 	>r >r swap r> ;
+:; 	drop ; 
+
+:exit r> drop ;												// allows #0if exit 
+
+:__stop $loop ;
