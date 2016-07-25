@@ -148,7 +148,9 @@ void DBGXRender(int *address,int runMode) {
 				int col = __colours[(ch >> 8) & 7];
 				ch = ch & 0x7F;
 				rcCharacter.y = rcDisplay.y + y * 14 * szy;
-				if (ch == 0x70 || ch == 0x71 || ch == 0x79 || ch == 0x67) rcCharacter.y += 3 * szy;
+				if (ch == 0x70 || ch == 0x71 || ch == 0x79 || ch == 0x67 || ch == 0x01 || ch == 0x02 ||
+					ch == 0x06 || ch == 0x0B || ch == 0x2C || ch == 0x3B || ch == 0x6A)  
+					rcCharacter.y += 3 * szy;
 				BYTE8 *fontInfo = __fontData+ch*9;
 				if (ch != ' ') {
 					for (int y1 = 0;y1 < 9;y1++) {
