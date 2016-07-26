@@ -76,22 +76,22 @@ BYTE8 CPUExecuteInstruction(void) {
 
 	LONG32 instruction = memory[pctr >> 2];											// Fetch instruction
 	pctr = (pctr + 4) & 0xFFFFC;													// Bump PC
+	LONG32 n;
 
 	switch (instruction >> 28) {													// Upper 4 bits.
 
-		case 8:																		// 8x relative call forward
+		case 8:																		// 8x relative call 
 			PUSHR(pctr);
 			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
-		case 9:																		// 9x relative call backward
-			PUSHR(pctr);
-			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
-			break;
-		case 10:																	// Ax relative branch forward.
+		case 9:																		// 9x relative bramch
 			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
-		case 11:																	// Ax relative branch backward.
-			pctr = (pctr - (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+		case 10:																	// Ax relative branch if zero.
+			PULLD(n);
+			if (n == 0) {
+				pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
+			}
 			break;
 		case 15:																	// Fx primitive
 			_CPUExecutePrimitive(instruction & 0xFF);
@@ -207,10 +207,6 @@ static void _CPUExecutePrimitive(BYTE8 opcode) {
 			break;
 		case OP_TO_R:																// >R transfer from data to return.
 			PULLD(n1);PUSHR(n1);
-			break;
-		case OP_NOTEQUALS_0IF:
-			PULLD(n1);																// #0IF execute next call only if tos != 0
-			if (n1 == 0) pctr = pctr + 4;													
 			break;
 		case OP_DOLLAR_HWIO:
 			PULLD(n1);																// Pull command

@@ -110,19 +110,15 @@ void DBGXRender(int *address,int runMode) {
 			sprintf(szBuffer,"%d",r);
 			colour = 0xF80;
 		}
-		if ((code & 0xF0000000) == 0xA0000000) {
-			sprintf(szBuffer,"br %05x",(int)(addr+4+(code & 0xFFFFF)));
-		}
-		if ((code & 0xF0000000) == 0xB0000000) {
-			sprintf(szBuffer,"br %05x",(int)(addr+4-(code & 0xFFFFF)));
-		}
 		if ((code & 0xF0000000) == 0x80000000) {
-			strcpy(szBuffer,__DBGDecodeCall((int)(addr+4+(code & 0xFFFFF))));
+			strcpy(szBuffer,__DBGDecodeCall((int)(addr+4-(code & 0xFFFFF))));
 			colour = 0xFF0;
 		}
 		if ((code & 0xF0000000) == 0x90000000) {
-			strcpy(szBuffer,__DBGDecodeCall((int)(addr+4-(code & 0xFFFFF))));
-			colour = 0xFF0;
+			sprintf(szBuffer,"br %05x",(int)(addr+4+(code & 0xFFFFF)));
+		}
+		if ((code & 0xF0000000) == 0x80000000) {
+			sprintf(szBuffer,"bz %05x",(int)(addr+4+(code & 0xFFFFF)));
 		}
 		if ((code & 0xF0000000) == 0xF0000000) {
 			int opcode = code & 0xFF;
