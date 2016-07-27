@@ -239,7 +239,7 @@ BYTE8 CPUExecute(LONG32 breakPoint1,LONG32 breakPoint2) {
 
 LONG32 CPUGetStepOverBreakpoint(void) {
 	BYTE8 opcode = memory[pctr >> 2] >> 28;
-	if (opcode != 8 && opcode != 9) return 0;										// Not a call.
+	if (opcode != 8) return 0;														// Not a call.
 	return (pctr+4) & 0xFFFFF;														// Instruction after next.	
 }
 

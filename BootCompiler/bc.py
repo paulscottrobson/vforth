@@ -1,6 +1,15 @@
 import re,sys
 
 ###############################################################################################################################################################
+#												Exception Handler
+###############################################################################################################################################################
+
+class ForthException(Exception):
+	def __init__(self,msg):
+		print(msg)
+		sys.exit(1)
+
+###############################################################################################################################################################
 #																Information on Primitives
 ###############################################################################################################################################################
 
@@ -15,7 +24,7 @@ class PrimitiveStore:
 		self.primitiveFind = {}																					# create the hash look up.
 		for i in range(0,len(self.primitiveList)):
 			self.primitiveFind[self.primitiveList[i]] = i
-
+		self.generateHeaderFile()																				# update header file.
 	def getPrimitiveID(self,name):																				# simple functions to extract data
 		return self.primitiveFind[name] if name in self.primitiveFind else None
 
@@ -61,6 +70,9 @@ class BackEndBaseClass:
 		self.compileWord(0,"(next free memory)")
 		self.compileWord(0,"(offset to __main)")
 
+	def getAddress(self):
+		return self.pointer 
+
 	def compileWord(self,word,comment,address = None):
 		address = self.pointer if address is None else address 							# convert address.
 		if address == self.pointer:														# allocate word if required
@@ -69,7 +81,7 @@ class BackEndBaseClass:
 		if self.isListing:
 			print("{0:08x} {1:08x}    {2}".format(address,word,comment))
 		if address == self.pointer:														# advance one word size
-			self.pointer += 4
+			self.pointer += self.getWordSize()
 			if len(self.code) > 1:
 				self.code[1] = self.pointer
 
@@ -89,12 +101,51 @@ class BackEndBaseClass:
 		if definingWord == "__main":													# found __main
 			self.code[2] = self.pointer 
 
+	def writeBinary(self,fileName):
+		h = open(fileName,"wb")
+		for b in self.code:
+			h.write(chr((b >> 0) & 0xFF))
+			h.write(chr((b >> 8) & 0xFF))
+			h.write(chr((b >> 16) & 0xFF))
+			h.write(chr((b >> 24) & 0xFF))
+		h.close()
 ###############################################################################################################################################################
 #												Back End for Virtual Machine
 ###############################################################################################################################################################
 
 class VMBackEnd(BackEndBaseClass):
-	pass
+
+	def getWordSize(self):
+		return 4
+
+	def generateConstant(self,constant):
+		uconstant = constant & 0xFFFFFFFF 												# 32 bit unsigned value.
+		upperBits = uconstant >> 30 													# check bits 30 and 31 are same, e.g. can sign extend
+		if upperBits == 1 or upperBits == 2:
+			raise ForthException("Cannot compile constant {0:08x}".format(constant))
+		self.compileWord(uconstant & 0x7FFFFFFF,str(constant))
+
+	def generatePrimitive(self,word):
+		primitiveID = self.prInfo.getPrimitiveID(word)									# get the ID
+		self.compileWord(primitiveID|0xF0000000,word)									# compile it
+
+	def generateCall(self,target,wordName):
+		offset = target - (self.getAddress()+4)											# offset.
+		self.compileWord(0x80000000 | (offset & 0x0FFFFFFF),"call "+wordName)			# compile relative call
+
+	def generateBackwardBranch(self,target):
+		offset = target - (self.getAddress()+4)											# offset.
+		self.compileWord(0x90000000 | (offset & 0x0FFFFFFF),"br {0:08x}".format(target)) # compile relative branch
+
+	def generateData(self,data):
+		self.compileWord(data & 0xFFFFFFFF,"data "+str(data))							# raw data
+
+	def generateForwardBranchIfZero(self):
+		self.compileWord(0xA0000000,"bz <undefined>")									# incomplete forward branch
+
+	def patchForwardBranchIfZero(self,target):									
+																						# patch up forward branch.
+		self.compileWord(0xA0000000+self.getAddress()-(target+4),"bz {0:08x}".format(self.getAddress(),target),target)
 
 ###############################################################################################################################################################
 #														Word source
@@ -116,14 +167,84 @@ class WordStream:
 
 	def endOfStream(self):																# check end of stream
 		return self.pointer >= len(self.words)
+
 	def get(self):																		# get next word, "" if none.
 		w = "" if self.endOfStream() else self.words[self.pointer]
 		self.pointer += 1
 		return w
 
+###############################################################################################################################################################
+#																	Compiler
+###############################################################################################################################################################
+
+class Compiler:
+	def __init__(self,wordStream,backEnd):
+
+		self.wordStream = wordStream 													# remember the word stream
+		self.backEnd = backEnd 															# remember the backend.
+		self.currentEntry = None 														# current entry for tail recursion
+		self.vocabulary = {}															# defined words
+		self.prInfo = PrimitiveStore() 													# primitive word information
+		self.openIf = None 																# address of open if
+
+		while not self.wordStream.endOfStream():										# keep compiling until complete.
+			word = self.wordStream.get()												# get next word.
+
+			if word == ':':																# word definition
+				name = self.wordStream.get()											# get word to define.
+				if name == "":
+					raise ForthException("Missing word name in definition")
+				self.backEnd.createDefinition(name)										# create the definition
+				self.currentEntry = self.backEnd.getAddress() 							# store current address.
+				self.vocabulary[name] = self.backEnd.getAddress() 						# store call address in the vocabulary list.
+
+			elif self.prInfo.getPrimitiveID(word) is not None:							# is it a primitive word.
+				self.backEnd.generatePrimitive(word)									# generate code for that primitive.
+				if word == ";": 														# if ; close any open if..then structures.
+					self.closeThen()
+
+			elif re.match("^\\-?\\d+$",word) is not None:								# check for decimal number
+				self.backEnd.generateConstant(int(word))
+
+			elif re.match("^\\$[0-9a-f]+$",word) is not None:							# check for hexadecimal number
+				self.backEnd.generateConstant(int(word[1:],16))
+
+			elif word == "wordsize":													# push word size
+				self.backEnd.generateConstant(self.backEnd.getWordSize())
+
+			elif word == "alloc":
+				count = self.wordStream.get()											# how many to do.
+				if re.match("^\\d+$",count) is None:
+					raise ForthException("Cannot alloc "+count)
+				for i in range(0,int(count)):
+					self.backEnd.generateData(0)
+
+			elif word == "if":															# if keyword.
+				if self.openIf is not None:
+					raise ForthException("Cannot nest if..then")
+				self.openIf = self.backEnd.getAddress() 								# create address
+				self.backEnd.generateForwardBranchIfZero()								# create blank forward blank
+
+			elif word == "then":														# then closes if.
+				self.closeThen()
+
+			elif word == "self":
+				if self.currentEntry is None:
+					raise ForthException("No current definition")
+				self.backEnd.generateBackwardBranch(self.currentEntry)
+
+			else:
+				if word not in self.vocabulary:											# check word is known
+					raise ForthException("Word '"+word+"' is not known.")
+				self.backEnd.generateCall(self.vocabulary[word],word)					# generate the call
+
+		self.backEnd.writeBinary("a.out")												# output the results.
+
+	def closeThen(self):
+		if self.openIf is not None:														# open If ?
+			self.backEnd.patchForwardBranchIfZero(self.openIf)
+			self.openIf = None
+
 ws = WordStream(["demo.c4"])
-be = BackEndBaseClass()
-be.createDefinition("dup")
-be.createDefinition("forget")
-be.createDefinition("__main")
-print(be.code)
+be = VMBackEnd()
+Compiler(ws,be)
