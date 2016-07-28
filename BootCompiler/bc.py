@@ -245,6 +245,6 @@ class Compiler:
 			self.backEnd.patchForwardBranchIfZero(self.openIf)
 			self.openIf = None
 
-ws = WordStream(["demo.c4"])
-be = VMBackEnd()
+ws = WordStream()
+be = VMBackEnd(False)
 Compiler(ws,be)

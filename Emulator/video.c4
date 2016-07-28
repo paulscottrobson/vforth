@@ -1,54 +1,77 @@
 //
-//	Colour Video Input/Out, Keyboard reading routines.
+//		Video I/O and input.
 //
 
-: height 16 ; : width 32 ; 														// screen dimensions.
-: editarea 4 ; 																	// lines for edit area
+: width 32 ;												// screen size
+: height 16 ;
+: editarea 4 ;												// bottom editing area
 
-: __cursor $variable ; 															// current cursor position.
-: __colour $variable ; 															// current colour
+: colour_execute $300 ;										// semantic colours
+: colour_compile $200 ;
+: colour_comment $700 ;
+: colour_define  $100 ;
 
-: red 1 __colour ! ; : green 2 __colour ! ; : yellow 3 __colour ! ; 			// colour settings
-: blue 4 __colour ! ; : magenta 5 __colour ! ; : cyan 6 __colour ! ; : white 7 __colour ! ;
+: _buffer $variable alloc 130 								// input buffer, word data
+: _cursor $variable ;										// cursor position on screen
+: _colour $variable ;										// print colour on screen
 
-: home 0 __cursor ! ; 															// home cursor 
+: screen! 1 $hwio 2 $hwio ; 								// Write to screen (chcl addr -)
 
-: screen! 1 $hwio 2 $hwio ; 													// write to display (addr chcl -)
-: __fillcopy over over screen! 													// tail recursive screen fill.
-					1+ dup height width * = #0if exit $loop  
+: home 0 _cursor ! ;										// Position Cursor
+: cursor width * + _cursor ! ;
 
-: fillscreen 0 __fillcopy drop drop home ;  									// clear screen with character (fill - )
-							
-: clearScreen 32 fillscreen ; 													// clear screen ( - )						
-	
-: cursor width * + __cursor ! ;													// cursor position (x y -)
+: red 1 _colour ! ; : green 2 _colour ! ; 					// Set write colour
+: yellow 3 _colour ! ; : blue 4 _colour ! ; 
+: magenta 5 _colour ! ; : cyan 6 _colour ! ; : white 7 _colour ! ;
 
-: __setVisibleCursor  __cursor @ screen! ; 										// Draw cursor in given colour (chcl -)
+: __fillScreenToEnd over over screen! 						// Fill screen to bottom (charcol start -)
+			1+ dup width height * = if 2drop ; self ;					
 
-: __checkOff __cursor @ height editarea - width * >= #0if clearscreen ;			// Check if wrap needed.
+: clearScreen $720 0  __fillScreenToEnd  home ;				// Clear screen home cursor
 
-: __printReturn 																// Print return (return - )
-	drop r> drop __cursor @  width + $FFFF width - 1+ and __cursor ! __checkOff ;
+: __scrollCheck height editarea - width * _cursor @ <= 		// Handle scrolling off the bottom, clears and back to top.
+											if clearScreen then ;
 
-: __printBackspace																// Print backspace (backspace - )
-	drop r> drop __cursor @ width 1- and 0= #0if exit 							// abandon if can't back space
-	-1 __cursor +! ;
+: __backspace _cursor @ width 1- and if -1 _cursor +! then ; // output backspace
 
-: __printControl r> drop 														// Handle control keys (key - )
-	31 and 
-	dup 13 = #0if __printReturn
-	dup 8 = #0if __printBackspace
-	dup 12 = #0if clearscreen
-	drop ;
+: emit 255 and  											// Emit to screen
+	dup 8 = if drop __backspace __scrollCheck ;
+	dup 13 = if drop _cursor @ width + width 0- and _cursor ! __scrollCheck ;
+	_colour @ 16* 16* or _cursor @ screen! 1 _cursor +! __scrollCheck ;
 
-: emit																			// Print character supports bs/cr (chcl -)
-	dup 127 and 32 < #0if __printControl 										// If control, print them.
-	__colour @ 7 and 256 * or 													// Colour them.
-	__cursor @ screen! 1 __cursor +! __checkOff ; 								// write character out and advance.
+: cr 13 emit ;												// Carriage return
+
+: key 0 $hwio dup 0# if ;  drop self 						// Read keystroke ( - key)
+
+: okPrompt _colour @ cyan 79 emit 107 emit _colour ! ;
+
+//
+//	Buffered area at bottom of screen input with coloured text.
+//
+
+: _iPointer $variable ;										// pointer into buffer
+
+: __getLastColour _iPointer @ 0= if colour_execute ; then 	// get colour of last character,execute if first
+							_iPointer @ 1- 4* _buffer + @ $FF00 and ;
+
+: __backspace _iPointer @ 0> if -1 _iPointer +! then ;		// handle backspace
+
+: __writeAtCursor height editarea - width * 				// write character at cursor pposition
+									_iPointer @ + screen! ;
+
+: !buffer _iPointer @  4* _buffer + ! ;						// write to buffer at current position.
+
+: __input $57F __writeAtCursor key $720 __writeAtCursor 
+	dup 13 = if drop 0 !buffer ; then 						// CR
+	dup 8 = if drop __backspace self then 					// BS
+	dup __getLastColour or
+	over 4 = if drop colour_define 32 + then 				// Ctrl + D
+	over 3 = if drop colour_compile 32 + then 				// Ctrl + C
+	over 5 = if drop colour_execute 32 + then				// Ctrl + E
+	over 18 = if drop colour_comment 32 + then 				// Ctrl + R
+	swap drop dup !buffer __writeAtCursor 1 _iPointer +! 
+	_iPointer @ width editarea * = if -1 _iPointer +! then 
+	self
 ;
 
-: key 0 $hwio dup #0if exit drop $loop ;										// get a keystroke ( - key)
-
-: keyWithCursor $5FF __setVisibleCursor key $720 __setVisibleCursor ;			// Get key with cursor display
-
-: $__init_video clearscreen white ;
+: inputBuffered 0 _iPointer ! $720 height editArea - width * __fillScreenToEnd __input _buffer ;
