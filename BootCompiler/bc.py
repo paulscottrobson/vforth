@@ -131,21 +131,21 @@ class VMBackEnd(BackEndBaseClass):
 
 	def generateCall(self,target,wordName):
 		offset = target - (self.getAddress()+4)											# offset.
-		self.compileWord(0x80000000 | (offset & 0x0FFFFFFF),"call "+wordName)			# compile relative call
+		self.compileWord(0xC0000000 | (offset & 0x0FFFFFFF),"call "+wordName)			# compile relative call
 
 	def generateBackwardBranch(self,target):
 		offset = target - (self.getAddress()+4)											# offset.
-		self.compileWord(0x90000000 | (offset & 0x0FFFFFFF),"br {0:08x}".format(target)) # compile relative branch
+		self.compileWord(0xD0000000 | (offset & 0x0FFFFFFF),"br {0:08x}".format(target)) # compile relative branch
 
 	def generateData(self,data):
 		self.compileWord(data & 0xFFFFFFFF,"data "+str(data))							# raw data
 
 	def generateForwardBranchIfZero(self):
-		self.compileWord(0xA0000000,"bz <undefined>")									# incomplete forward branch
+		self.compileWord(0xE0000000,"bz <undefined>")									# incomplete forward branch
 
 	def patchForwardBranchIfZero(self,target):									
 																						# patch up forward branch.
-		self.compileWord(0xA0000000+self.getAddress()-(target+4),"bz {0:08x}".format(self.getAddress(),target),target)
+		self.compileWord(0xE0000000+self.getAddress()-(target+4),"bz {0:08x}".format(self.getAddress(),target),target)
 
 ###############################################################################################################################################################
 #														Word source

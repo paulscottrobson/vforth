@@ -80,22 +80,27 @@ BYTE8 CPUExecuteInstruction(void) {
 
 	switch (instruction >> 28) {													// Upper 4 bits.
 
-		case 8:																		// 8x relative call 
+		case 0xC:																	// Cx relative call 
 			PUSHR(pctr);
 			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
-		case 9:																		// 9x relative bramch
+		case 0xD:																	// Dx relative bramch
 			pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			break;
-		case 10:																	// Ax relative branch if zero.
+		case 0xE:																	// Ex relative branch if zero.
 			PULLD(n);
 			if (n == 0) {
 				pctr = (pctr + (instruction & 0x0FFFFFFF)) & 0xFFFFC;
 			}
 			break;
-		case 15:																	// Fx primitive
+		case 0xF:																	// Fx primitive
 			_CPUExecutePrimitive(instruction & 0xFF);
 			break;
+		case 0x8:
+		case 0x9:
+		case 0xA:
+		case 0xB:
+			exit(fprintf(stderr,"Crashed at %x illegal opcode %x\n",pctr-4,instruction));
 		default:
 			instruction = instruction & 0x7FFFFFFF;									// make 31 bit constant
 			if ((instruction & 0x40000000) != 0) instruction |= 0x80000000; 		// sign extend.
