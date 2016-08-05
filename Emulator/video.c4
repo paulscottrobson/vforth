@@ -1,6 +1,8 @@
+// ************************************************************************************************************************
 //
-//		Video I/O and input.
+//													Video I/O and input.
 //
+// ************************************************************************************************************************
 
 : width 32 ;												// screen size
 : height 16 ;
@@ -11,7 +13,8 @@
 : colour_comment $700 ;
 : colour_define  $100 ;
 
-: _buffer $variable alloc 130 								// input buffer, word data
+: _buffer $variable alloc 130 								// input buffer, word data. Has to be width x editarea + 1 
+
 : _cursor $variable ;										// cursor position on screen
 : _colour $variable ;										// print colour on screen
 
@@ -45,9 +48,11 @@
 
 : okPrompt _colour @ cyan 79 emit 107 emit _colour ! ;
 
+// ************************************************************************************************************************
 //
-//	Buffered area at bottom of screen input with coloured text.
+//							Buffered area at bottom of screen input with coloured text.
 //
+// ************************************************************************************************************************
 
 : _iPointer $variable ;										// pointer into buffer
 
@@ -64,14 +69,17 @@
 : __input $57F __writeAtCursor key $720 __writeAtCursor 
 	dup 13 = if drop 0 !buffer ; then 						// CR
 	dup 8 = if drop __backspace self then 					// BS
-	dup __getLastColour or
-	over 4 = if drop colour_define 32 + then 				// Ctrl + D
+	dup __getLastColour or 									// Colour text with whatever.
+	over 4 = if drop colour_define 32 + then 				// Ctrl + D all these switch to coloured spaces
 	over 3 = if drop colour_compile 32 + then 				// Ctrl + C
 	over 5 = if drop colour_execute 32 + then				// Ctrl + E
 	over 18 = if drop colour_comment 32 + then 				// Ctrl + R
-	swap drop dup !buffer __writeAtCursor 1 _iPointer +! 
+	swap drop dup !buffer __writeAtCursor 1 _iPointer +!  	// Write out.
 	_iPointer @ width editarea * = if -1 _iPointer +! then 
 	self
 ;
 
-: inputBuffered 0 _iPointer ! $720 height editArea - width * __fillScreenToEnd __input _buffer ;
+: inputBuffered 0 _iPointer ! 								// Reset pointer
+	$720 height editArea - width * __fillScreenToEnd 		// Clear edit area
+	__input  												// Input text
+	_buffer ;												// Return buffer address (word string ending in 0)
