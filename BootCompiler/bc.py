@@ -25,11 +25,15 @@ class PrimitiveStore:
 		for i in range(0,len(self.primitiveList)):
 			self.primitiveFind[self.primitiveList[i]] = i
 		self.generateHeaderFile()																				# update header file.
+
 	def getPrimitiveID(self,name):																				# simple functions to extract data
 		return self.primitiveFind[name] if name in self.primitiveFind else None
 
 	def getPrimitiveName(self,id):
 		return self.primitiveList[id] if id >= 0 and id < len(self.primitiveList) else None
+
+	def getPrimitiveList(self):
+		return self.primitiveList
 
 	def generateHeaderFile(self):
 		h = open("__primitives.h","w")
@@ -109,6 +113,24 @@ class BackEndBaseClass:
 			h.write(chr((b >> 16) & 0xFF))
 			h.write(chr((b >> 24) & 0xFF))
 		h.close()
+
+	def createPrimitiveDefinitions(self,dictionary):												
+		for word in self.prInfo.getPrimitiveList():										# create execute and compile versions.
+			self.createPrimitive(word,dictionary)
+
+	def createPrimitive(self,word,dictionary):
+		reject = word == ">r" or word == "r>" or word == ";"							# these use return stack, no execution version
+		if not reject:																	
+			self.createDefinition(word)													# simple execution word.
+			self.generatePrimitive(word)
+			self.generatePrimitive(";")
+
+		self.createDefinition(word+"|")													# word to compile primitives
+		self.generateConstant(self.prInfo.getPrimitiveID(word))							# get primitive word
+		assert "," in dictionary,"The code does not include a definition for ,"
+		self.generateCall(dictionary[","],",")											# call word compile.
+		self.generatePrimitive(";")													
+
 ###############################################################################################################################################################
 #												Back End for Virtual Machine
 ###############################################################################################################################################################
@@ -238,6 +260,7 @@ class Compiler:
 					raise ForthException("Word '"+word+"' is not known.")
 				self.backEnd.generateCall(self.vocabulary[word],word)					# generate the call
 
+		self.backEnd.createPrimitiveDefinitions(self.vocabulary)						# create the primitive words.
 		self.backEnd.writeBinary("a.out")												# output the results.
 
 	def closeThen(self):

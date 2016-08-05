@@ -7,10 +7,12 @@
 
 : $__init_utility	
 			dup  dup dup	 								// 2 copies of base on the stack
-			@ + Here ! 			   							// Read next free word offset, add actual base address and save $Here
-			WordSize + @ + head ! 							// Read the offset word after that, add the actual base address and save $Head
+			@ + head ! 			   							// Read dictionary head address, add actual base address and save in head
+			WordSize + @ + here ! 							// Read next compile address, add the actual base address and save in here
 			10 base ! 										// Set up base to decimal.
 			;
+
+: , here @ ! wordsize here +! ;								// Word compiler word , which is required for the compiler.
 
 : = 	- 0= ;												// Utility stuff.
 : > 	- 0> ;
