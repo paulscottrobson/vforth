@@ -250,6 +250,12 @@ class Compiler:
 			elif word == "then":														# then closes if.
 				self.closeThen()
 
+			elif word[0] == "%":														# is it a word ?
+				colour = (ord(word[1])-ord('0'))*256 									# 3 execute 2 compile 7 comment 1 def
+				self.backEnd.generateData(colour+0x20)									# space first.
+				for c in word[2:]:														# rest of word
+					self.backEnd.generateData(ord(c)+colour)							
+
 			elif word == "self":
 				if self.currentEntry is None:
 					raise ForthException("No current definition")
@@ -260,7 +266,7 @@ class Compiler:
 					raise ForthException("Word '"+word+"' is not known.")
 				self.backEnd.generateCall(self.vocabulary[word],word)					# generate the call
 
-		self.backEnd.createPrimitiveDefinitions(self.vocabulary)						# create the primitive words.
+		#self.backEnd.createPrimitiveDefinitions(self.vocabulary)						# create the primitive words.
 		self.backEnd.writeBinary("a.out")												# output the results.
 
 	def closeThen(self):
@@ -269,5 +275,5 @@ class Compiler:
 			self.openIf = None
 
 ws = WordStream()
-be = VMBackEnd(False)
+be = VMBackEnd(True)
 Compiler(ws,be)

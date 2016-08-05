@@ -1,1 +1,5 @@
-: __main $__init_utility clearScreen okPrompt inputBuffered $__stop ;
+
+: test $variable %3exec %2comp %7rem %1def alloc 1
+
+: __main $__init_utility here @ test $__stop ;
+

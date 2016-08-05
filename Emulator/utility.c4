@@ -24,10 +24,6 @@
 	
 : mod 	over over / * - ;
 
-: r> 	r> r> swap >r ;										// changes required for runtime vs compile time. Remember r> >r in the body are inlined.
-: >r 	>r >r swap r> ;
-: ; 	drop ; 
-
 : 2drop drop drop ;
 : 2dup  dup dup ;
 
