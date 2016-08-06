@@ -8,3 +8,23 @@
 : u. __u. 32 emit ;
 : . dup 0< if 0- 45 emit then u. ;
 
+
+: __toUpper dup dup 96 > swap 123 < and if 32 - then ;					// capitalise ascii
+
+: __toHex 																// convert character to digit (e.g. 'A' -> 10)
+	127 and __toUpper 													// remove colour and capitalise
+	dup dup 58 >= swap 65 < and over 48 < or if drop -1 ; 				// return -1 if 58 ..64
+	dup 64 > if 7 - then 48 -  											// adjust for middle bit and convert to value
+	dup base @ >= if drop -1 then ;										// check value < base
+
+: __sToI 																//	(string current - integer ok)
+	over @ 127 and 32 <= if swap drop 1 ; then 							// end of number
+	over @ __toHex dup 0< if drop drop drop 0 0 ; then 					// bad digit 
+	swap base @ * + swap wordsize + swap self 							// add to rest of digit and reenter
+
+: stringToInteger  														// (string - integer ok)
+	dup @ 127 and 45 = if wordsize + stringToInteger swap 0- swap ; 	// handle -ve numbes
+	dup @ __toHex 0< if drop 0 0 ;										// check first legitimate
+	0 __sToI ;															// convert it.
+
+

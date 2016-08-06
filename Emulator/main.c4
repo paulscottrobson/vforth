@@ -38,8 +38,11 @@
 
 : cload $source ! __cload ;
 
+: test  $variable %5164207x %1intelligence %3exec %2comp %7rem  alloc 1
 
-: test  $variable %1intelligence %3exec %2comp %7rem  alloc 1
-
-: __main $__init_utility here @  -1 test cload $__stop ;
+: __main $__init_utility 
+	//here @  -1 test cload
+	clearScreen 10 base !
+	42 test wordsize + stringToInteger . . . cr
+	 $__stop ;
 
