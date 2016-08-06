@@ -1,5 +1,45 @@
 
-: test $variable %3exec %2comp %7rem %1def alloc 1
+: $source $variable 0 													// address of input line.
+: $type $variable 0 													// type (colourchar masked with $FF00)
 
-: __main $__init_utility here @ test clearscreen inputBuffered $__stop ;
+: __fetch $source @ @ wordsize $source +! ;
+: __undoFetch wordSize 0- $source +! ;
+
+: __doHeaderLink here @ dup head @ - , head ! ;							// compile link back to previous head, update head
+: __bit31 $20000000 4* ; 												// cannot do $80000000 inline in VM.
+
+: __shiftCharacterIn 
+	over @ $FF000000 and if 											// space for it in this word ?
+		over __bit31 swap +! swap wordsize + 0 over ! swap 				// if not, set MSB and go to next word clearing it
+	then 
+	over @ 16* 16* + over !												// (addr data - addr) shift into word
+;
+
+: __getCharacter 														// (addr of first word - addr of last word)
+	__fetch 127 and dup $20 <= if drop __undoFetch ; 					// get character, if control or space exit out.
+	__shiftCharacterIn self
+
+: __getWord																//  (firstword - lastword )
+	0 over ! __getCharacter ;
+
+: __cload																//	( - )
+	__fetch dup $7F and $20 = if drop self then 						// skip spaces
+	dup 0= if drop ; then 												// exit if zero.
+	__undoFetch 														// unpick fetch as got something
+	$FF00 and dup colour_define = if __doHeaderLink then 				// isolate the colour. If define build the link back word	
+	here @ __getWord 													// Construct the word at HERE.
+	swap 																// (endOfWord colour)
+	// TODO: comment code, throw it.
+	// TODO: defining code, update HERE
+	// TODO: execution code, find it and execute it or call error
+	// TODO: compilation code, find it and execute it, if not, find execution and compile call to that, if not, call error.
+	$__stop	
+;
+
+: cload $source ! __cload ;
+
+
+: test  $variable %1intelligence %3exec %2comp %7rem  alloc 1
+
+: __main $__init_utility here @  -1 test cload $__stop ;
 
