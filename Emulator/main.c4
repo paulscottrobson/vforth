@@ -22,27 +22,26 @@
 : __getWord																//  (firstword - lastword )
 	0 over ! __getCharacter ;
 
-: __cload																//	( - )
+: __cload																//	( - ok )
 	__fetch dup $7F and $20 = if drop self then 						// skip spaces
-	dup 0= if drop ; then 												// exit if zero.
-	__undoFetch 														// unpick fetch as got something
+	dup 0= if drop 1 ; then 											// exit if zero, return 1
+	__undoFetch 														// unpick fetch as got something	
 	$FF00 and dup colour_define = if __doHeaderLink then 				// isolate the colour. If define build the link back word	
-	here @ __getWord 													// Construct the word at HERE.
-	swap 																// (endOfWord colour)
-	// TODO: comment code, throw it.
-	// TODO: defining code, update HERE
-	// TODO: execution code, find it and execute it or call error
-	// TODO: compilation code, find it and execute it, if not, find execution and compile call to that, if not, call error.
-	$__stop	
+	here @ __getWord 													// Construct the compressed word at HERE.
+	swap 																// stack now (endOfWord colour)
+	dup colour_define = if over wordsize + here ! then 					// if definition word update HERE
+	dup colour_execute = if $__stop then 								// find it, execute it not found try as constant.
+	dup colour_compile = if $__stop then								// execute compiler word, find defined word, constant.
+																		// comments (colour_comment) do nothing at all
+	drop drop self 														// throw away endOfWord and colour and re-enter.
 ;
 
 : cload $source ! __cload ;
 
-: test  $variable %5164207x %1intelligence %3exec %2comp %7rem  alloc 1
+: test  $variable %1test %1intelligence    alloc 1
 
 : __main $__init_utility 
-	//here @  -1 test cload
-	clearScreen 10 base !
-	42 test wordsize + stringToInteger . . . cr
+	clearScreen 16 base !
+	here @ -1 test cload . . . here @ .
 	 $__stop ;
 
